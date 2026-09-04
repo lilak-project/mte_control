@@ -1,0 +1,22 @@
+# NoticeKOREA CENS SCALER (the MTE module), VID:PID 0547:1309.
+#
+# Without this the USB node is crw-rw-r-- root:root, so only root can open it --
+# which is the whole reason the runner has had to be started from `sudo -i`.
+#
+# GROUP is filled in by ../install_udev_rule.sh with a group the operator is
+# actually in; plugdev is the usual answer on a desktop Linux, and the script
+# says so if it has to pick something else. TAG+="uaccess" additionally hands
+# the device to whoever is physically logged in, which covers the case where
+# the group is wrong but someone is at the console.
+#
+# Install:
+#   ../install_udev_rule.sh
+#
+# or by hand, substituting your group for plugdev:
+#   sudo cp 99-mte-scaler.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger --attr-match=idVendor=0547 --attr-match=idProduct=1309
+#
+# Nothing needs unplugging: the trigger re-applies the rule to a module that is
+# already connected.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0547", ATTRS{idProduct}=="1309", MODE="0660", GROUP="plugdev", TAG+="uaccess"

@@ -1,0 +1,316 @@
+@import "@fontsource-variable/geist-mono";
+@import "uplot/dist/uPlot.min.css";
+
+:root {
+  color-scheme: light;
+
+  /* Colour means one thing each; nothing on this page is tinted for looks. */
+  --mte-live: #1f7a35;
+  --mte-fault: #b02a1e;
+  --mte-fault-bg: #fdf0ee;
+  --mte-rule: #e6e8ea;
+  --mte-rule-strong: #c9cdd1;
+  --mte-zebra: #fafbfc;
+  --mte-dim: #7a8085;
+  --mte-head-bg: #f2f4f6;
+}
+
+body {
+  /* A plain white page: the only boxes on it are the ones that mean something. */
+  background: var(--mantine-color-white);
+}
+
+/* Readings that update twice a second must not reflow as digits change, and
+   columns must line up down the whole table. */
+.tabular {
+  font-family: var(--mantine-font-family-monospace);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.dim {
+  color: var(--mte-dim);
+}
+
+/* --- the channel tables ------------------------------------------------ */
+
+/* Ten channels against ten columns is a lot of numbers, and the only thing
+   that helps is fitting more of them on screen: a small, dense, ruled table
+   rather than cards. */
+.grid {
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.3;
+  width: 100%;
+}
+
+.grid th,
+.grid td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--mte-rule);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--mte-head-bg);
+  border-bottom: 1px solid var(--mte-rule-strong);
+  font-weight: 600;
+  font-size: 11px;
+  color: #3d4348;
+}
+
+/* The channel column anchors the row and stays left-aligned; every other
+   column is a number and reads down its own right edge. */
+.grid th.col-ch,
+.grid td.col-ch {
+  text-align: left;
+  width: 1%;
+}
+
+.grid tbody tr:nth-child(even) td {
+  background: var(--mte-zebra);
+}
+
+.grid tbody tr:hover td {
+  background: #eef4fb;
+}
+
+/* A channel that is counting, as against one reading zero. Never the only
+   thing saying so -- the count itself is in the row. */
+.grid td.live {
+  color: var(--mte-live);
+  font-weight: 600;
+}
+
+.grid td.quiet {
+  color: var(--mte-dim);
+}
+
+/* The swatch that ties a row to its line on the chart. Beside the channel
+   number, never instead of it. */
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+/* --- the channel grid -------------------------------------------------- */
+
+/* The module's two halves, side by side: triggers down the left, scalers down
+   the right. Ten rows each, so ch1 sits level with ch11 and the whole module is
+   one glance -- and the pattern of what is ticked reads as a shape rather than
+   as a list that has to be followed. */
+.channel-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mantine-spacing-md) var(--mantine-spacing-lg);
+  align-items: start;
+}
+
+/* One channel per row within a half; the columns are the two halves, not a
+   wrap. A half that wrapped into two columns of five would put ch6 beside ch1
+   and destroy the alignment the layout exists for. */
+.channels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+/* Below two columns' worth of width they stack, still one channel per row. */
+@media (max-width: 61.99em) {
+  .channel-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.channel-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+  border-radius: var(--mantine-radius-sm);
+}
+
+/* A channel the profile reads. Tinted, but the tick and the enabled name box
+   say it too -- the colour is never the only thing carrying it. */
+.channel-row.is-on {
+  background: #eef4fd;
+}
+
+.channel-pick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--mte-rule-strong);
+  border-radius: var(--mantine-radius-sm);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 6px;
+  cursor: pointer;
+  color: var(--mte-dim);
+}
+
+.channel-row.is-on .channel-pick {
+  border-color: var(--mantine-color-blue-6);
+  color: inherit;
+  font-weight: 600;
+}
+
+.channel-pick:hover {
+  background: var(--mte-zebra);
+}
+
+/* Reserved whether or not it is ticked, so the numbers stay in one column
+   instead of shifting sideways as channels are picked. */
+.channel-pick .tick {
+  display: inline-block;
+  width: 10px;
+  color: var(--mantine-color-blue-7);
+}
+
+/* --- the run list ------------------------------------------------------ */
+
+.runs {
+  max-height: 620px;
+  overflow: auto;
+  border: 1px solid var(--mte-rule);
+  border-radius: var(--mantine-radius-md);
+}
+
+.run-row {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--mte-rule);
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  padding: 5px 10px;
+}
+
+.run-row:hover {
+  background: var(--mte-zebra);
+}
+
+.run-row.is-current {
+  background: #eaf2fd;
+  box-shadow: inset 3px 0 0 var(--mantine-color-blue-7);
+}
+
+/* --- the runner log ---------------------------------------------------- */
+
+.log {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow: auto;
+  background: #fafbfc;
+  border: 1px solid var(--mte-rule);
+  border-radius: var(--mantine-radius-sm);
+  padding: 8px 10px;
+}
+
+/* --- the chart --------------------------------------------------------- */
+
+/* uPlot draws into a canvas it sizes itself; this is the box it measures. */
+.chart-host {
+  width: 100%;
+}
+
+/* uPlot sets the pixel width of .uplot and .u-wrap itself, and the canvas is
+   sized to them; overriding either stretches the bitmap. The host is what
+   follows the panel, and the ResizeObserver passes its width to uPlot. */
+.chart-host .uplot {
+  width: 100%;
+}
+
+/* uPlot's defaults are for a dark demo page. Match the panel instead. */
+.chart-host .u-axis,
+.chart-host .u-legend {
+  font-family: var(--mantine-font-family);
+}
+
+.chart-host .u-legend {
+  font-size: var(--mantine-font-size-xs);
+  margin-top: 2px;
+}
+
+.chart-host .u-legend .u-marker {
+  border-width: 3px;
+}
+
+.chart-host .u-legend .u-value {
+  font-family: var(--mantine-font-family-monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The drag-to-zoom rectangle, in the accent colour so it reads as a selection
+   rather than as data. */
+.chart-host .u-select {
+  background: rgba(25, 113, 194, 0.12);
+  border: 1px solid rgba(25, 113, 194, 0.45);
+}
+
+.chart-host .u-cursor-x,
+.chart-host .u-cursor-y {
+  border-color: var(--mantine-color-gray-5);
+}
+
+/* --- facts ------------------------------------------------------------- */
+
+/* A definition list of facts, two columns that stay aligned down the panel. */
+.fact-grid {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) 1fr;
+  gap: 4px var(--mantine-spacing-md);
+  align-items: baseline;
+}
+
+.fact-grid dt {
+  color: var(--mte-dim);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.fact-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--mantine-font-size-sm);
+}
+
+@media (max-width: 47.99em) {
+  .fact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fact-grid dd {
+    margin-bottom: 6px;
+  }
+}
+
+/* A printout rather than a table of readings. */
+.grid.print th,
+.grid.print td { padding: 1px 10px; font-size: 12px; }
+.grid.print td {
+  font-family: var(--mantine-font-family-monospace);
+  font-variant-numeric: tabular-nums;
+}
+.grid.print tbody tr:nth-child(even) td { background: transparent; }
+.grid.print tbody tr.is-newest td {
+  background: #eef4fd;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 var(--mantine-color-blue-3);
+}

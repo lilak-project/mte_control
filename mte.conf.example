@@ -1,0 +1,66 @@
+# MTE DAQ -- this machine's own settings.
+#
+#   cp mte.conf.example mte.conf     and edit; mte.conf is not in version
+#                                    control, so each host keeps its own.
+#
+# Every key here is also an environment variable of the same name, and the
+# environment wins:
+#
+#   MTE_PORT=8005 ./start_server.sh
+#
+# Nothing in this file is required. A fresh copy of this tree runs correctly
+# with no mte.conf at all -- it just has no older runs to list, and listens on
+# 8004.
+#
+# Relative paths are relative to this directory, so they mean the same thing on
+# every machine. Absolute paths win, which is what you want when the run data
+# belongs on a particular array.
+
+
+# --- where things are ------------------------------------------------------
+
+# Where runs live. Each profile gets a directory under this, and its runs are
+# numbered inside it:
+#
+#   <MTE_RUN_ROOT>/ko2520/setup.txt
+#   <MTE_RUN_ROOT>/ko2520/converted/run_000316/
+#
+# Default: backend/runs
+# MTE_RUN_ROOT=/data1/ko2520/mte_control
+
+# runs.json and setups.json -- run names and setup profiles.
+# Default: backend/data
+# MTE_DATA_DIR=
+
+# The runner binary. Default: runner/build/run_mte.exe, i.e. the one
+# ./runner/build.sh produces. Only set this to use a build outside this tree.
+# MTE_RUNNER=
+
+# The built UI. Default: frontend/dist
+# MTE_STATIC_DIR=
+
+
+# --- the server ------------------------------------------------------------
+
+# MTE_PORT=8004
+
+# 0.0.0.0 lets other machines on the LAN connect; 127.0.0.1 is this host only.
+# MTE_HOST=0.0.0.0
+
+
+# --- tuning ----------------------------------------------------------------
+# The defaults are right unless you have a reason.
+
+# Counter samples held in memory per channel. Default 86400: 24 h at 1 Hz.
+# Older samples are still in the run's file and are read back from it.
+# MTE_HISTORY_LIMIT=86400
+
+# Bytes of time-stamp text parsed per pass before the parser skips ahead and
+# says how much it skipped. Raise it on a fast machine with a busy channel.
+# MTE_STAMP_BYTE_BUDGET=8388608
+
+# How often the converted files are checked for new lines, in seconds.
+# MTE_TAIL_INTERVAL=0.25
+
+# How often the live tables are pushed to the browsers, in seconds.
+# MTE_BROADCAST_INTERVAL=0.5

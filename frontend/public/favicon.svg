@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- A scaler: a counting pulse train over a baseline. -->
+  <rect width="32" height="32" rx="7" fill="#2a78d6"/>
+  <path d="M4 22h4v-9h4v9h4v-13h4v13h4v-6h4"
+        fill="none" stroke="#fff" stroke-width="2.4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

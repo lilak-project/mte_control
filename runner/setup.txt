@@ -1,0 +1,14 @@
+1 1 1
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+---------------------------------------------------------------------------
+1. Down-scale ch17, ch18, ch19
+2. Input signal level ch1 ~ ch20, 0 = negative NIM, 1 = TTL
+
+A starting point, so `./build/run_mte.exe --monitor` works straight after a
+build: no down-scaling, every input negative NIM. Only the first two lines are
+read -- the runner stops after twenty-three integers -- so this text is a
+comment.
+
+The service does not use this file. It renders its own from the setup profile
+chosen for the run and passes it with --setup, which is why a run's directory
+records the configuration it was actually taken with.
