@@ -252,7 +252,7 @@ def run_started(run_number: int, profile_name: str, name: str, note: str,
         "active_channels": _numbers(triggers + counters),
     }
     _push(LOG_TYPE_START, run_number,
-          name or f"Run {run_number}", "\n".join(lines), fields)
+          f"MTE · {name or f'Run {run_number}'}", "\n".join(lines), fields)
 
 
 def run_ended(run_number: int, state: str, exit_code: int | None,
@@ -274,4 +274,4 @@ def run_ended(run_number: int, state: str, exit_code: int | None,
     # (the run's name, else "Run N") so the pair reads together, plus the outcome,
     # which is the whole point of the end boundary.
     base = name or f"Run {run_number}"
-    _push(LOG_TYPE_END, run_number, f"{base} — {state}", "\n".join(lines))
+    _push(LOG_TYPE_END, run_number, f"MTE · {base} — {state}", "\n".join(lines))
