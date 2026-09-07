@@ -1,4 +1,4 @@
-import { Group, Paper, Text } from "@mantine/core"
+import { Group, Paper, Stack, Text } from "@mantine/core"
 
 /**
  * The runner's own printout, as it has always scrolled past in a terminal.
@@ -14,6 +14,7 @@ import { Group, Paper, Text } from "@mantine/core"
  * that has just stopped counting actually announces itself.
  */
 export function PrintBlock({
+  run,
   title,
   hint,
   first,
@@ -21,6 +22,14 @@ export function PrintBlock({
   rows,
   empty,
 }: {
+  /** Which run these rows are from, on its own line above the title.
+   *
+   *  Given the room rather than folded into the title because it is the one
+   *  thing that decides whether the numbers underneath are worth reading. A
+   *  printout stays on screen after its run ends, and at a glance "the last ten
+   *  seconds" reads as a claim about now — the run number is what corrects it,
+   *  so it should be readable from where the operator is standing. */
+  run?: string | null
   title: string
   hint?: string
   /** The leading, non-channel columns: event number, clock, and so on. */
@@ -33,16 +42,23 @@ export function PrintBlock({
 }) {
   return (
     <Paper withBorder p={0} style={{ overflow: "hidden" }}>
-      <Group justify="space-between" align="baseline" px="xs" py={6} wrap="wrap" gap="xs">
-        <Text fw={600} size="sm">
-          {title}
-        </Text>
-        {hint ? (
-          <Text size="xs" c="dimmed">
-            {hint}
+      <Stack gap={0} px="xs" py={6}>
+        {run ? (
+          <Text fw={700} fz="1.6rem" lh={1.15} className="tabular">
+            {run}
           </Text>
         ) : null}
-      </Group>
+        <Group justify="space-between" align="baseline" wrap="wrap" gap="xs">
+          <Text fw={600} size="sm" c={run ? "dimmed" : undefined}>
+            {title}
+          </Text>
+          {hint ? (
+            <Text size="xs" c="dimmed">
+              {hint}
+            </Text>
+          ) : null}
+        </Group>
+      </Stack>
 
       {rows.length === 0 ? (
         <Text size="sm" c="dimmed" ta="center" py="lg">

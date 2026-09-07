@@ -95,6 +95,8 @@ app.include_router(control.router)
 app.include_router(history.router)
 app.include_router(profiles.router)
 app.include_router(status.router)
+from .routers import live as _live  # noqa: E402
+app.include_router(_live.router)
 # This service is a LILAK elog SYSTEM: it answers the handshake and receives
 # credentials here, and pushes run start/end from acquisition.py.
 app.include_router(elog.router)

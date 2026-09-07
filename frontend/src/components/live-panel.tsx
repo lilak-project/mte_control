@@ -172,7 +172,7 @@ export function LivePanel({
       : status?.run_number != null
         ? `Run ${status.run_number}`
         : null
-  const printTitle = (what: string) => (runLabel ? `${runLabel} · ${what}` : what)
+
   const stampPrint = status?.stamp_print ?? { channels: [], labels: [], rows: [] }
 
   return (
@@ -243,7 +243,8 @@ export function LivePanel({
         />
 
         <PrintBlock
-          title={printTitle(`The last ${status?.print_rows ?? 10} counting periods`)}
+          run={runLabel}
+          title={`The last ${status?.print_rows ?? 10} counting periods`}
           hint="the runner's own printout · newest at the bottom"
           first={[
             { label: "event#", values: counterPrint.rows.map((row) => String(row.index)) },
@@ -281,7 +282,8 @@ export function LivePanel({
         />
 
         <PrintBlock
-          title={printTitle(`Hits in each of the last ${status?.print_rows ?? 10} seconds`)}
+          run={runLabel}
+          title={`Hits in each of the last ${status?.print_rows ?? 10} seconds`}
           hint="complete seconds only · newest at the bottom"
           first={[
             { label: "t", values: stampPrint.rows.map((row) => formatRunClock(row.second)) },
