@@ -11,12 +11,46 @@ service already holds -- no hardware on the request path.
 
 from __future__ import annotations
 
+import time
+
 from fastapi import APIRouter
 
 from .. import profiles, runs
 from ..acquisition import acquisition
 
 router = APIRouter(tags=["live"])
+
+#: How much of the past a tile's sparkline shows, with how many points, and how
+#: often it is recomputed however fast the wall polls.
+SPARK_WINDOW_SEC = 3600.0
+SPARK_POINTS = 60
+SPARK_TTL = 15.0
+_spark_cache: tuple[float, dict[int, list[float]]] = (0.0, {})
+
+
+def _sparks(channels: list[int]) -> dict[int, list[float]]:
+    """The last hour of counter rate for each channel, from the live buffers.
+
+    Counter buffers hold counts per counting period; the tile shows a rate, so
+    the series is divided by the period to match the number in front of it.
+    """
+    global _spark_cache
+    now = time.monotonic()
+    if now - _spark_cache[0] < SPARK_TTL:
+        return _spark_cache[1]
+    out: dict[int, list[float]] = {}
+    if channels:
+        try:
+            series = acquisition.series(channels, time.time() - SPARK_WINDOW_SEC, None, SPARK_POINTS)
+            period = series.get("period") or 1.0
+            for row in series.get("channels") or []:
+                values = [float(v) / period for v in (row.get("v") or []) if v is not None]
+                if len(values) >= 2:
+                    out[row["channel"]] = values
+        except Exception:                  # no run yet, or a buffer being rebuilt
+            out = {}
+    _spark_cache = (now, out)
+    return out
 
 
 def _num(value, digits=0):
@@ -68,6 +102,8 @@ def live() -> dict:
     counters, stamps = snap.get("counters") or [], snap.get("stamps") or []
     labels = profile.get("labels") or {}
     triggers = set(profile.get("trigger_channels") or [])
+    shown = [c for c in (profile.get("live_shown") or []) if c not in triggers]
+    sparks = _sparks(shown)
     for channel in profile.get("live_shown") or []:
         # A chosen channel keeps its tile whether or not there is a run: between
         # runs the wall should show the same set of numbers, at "—", rather than
@@ -83,5 +119,6 @@ def live() -> dict:
                           "state": "running" if running else ""})
         else:
             items.append({"label": label, "value": _num((row or {}).get("rate")), "unit": "cnt/s",
-                          "state": "running" if running else ""})
+                          "state": "running" if running else "",
+                          "spark": sparks.get(channel, []), "spark_window": "1 h"})
     return {"ok": True, "items": items}
