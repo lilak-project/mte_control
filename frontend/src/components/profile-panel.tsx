@@ -70,8 +70,7 @@ export function ProfilePanel({
   const [name, setName] = useState("")
   const [note, setNote] = useState("")
   const [selected, setSelected] = useState<number[]>([])
-  const [liveCounter, setLiveCounter] = useState<number | null>(null)
-  const [liveTrigger, setLiveTrigger] = useState<number | null>(null)
+  const [liveChannels, setLiveChannels] = useState<number[]>([])
   const [names, setNames] = useState<Record<string, string>>({})
   const [inputType, setInputType] = useState<number[]>(Array.from({ length: 20 }, () => 0))
   const [downScale, setDownScale] = useState<number[]>([1, 1, 1])
@@ -100,8 +99,7 @@ export function ProfilePanel({
     setName(profile.name)
     setNote(profile.note)
     setSelected([...profile.selected])
-    setLiveCounter(profile.live_counter ?? null)
-    setLiveTrigger(profile.live_trigger ?? null)
+    setLiveChannels([...(profile.live_channels ?? [])])
     setNames({ ...profile.names })
     setInputType([...profile.input_type])
     setDownScale([...profile.down_scale])
@@ -136,8 +134,7 @@ export function ProfilePanel({
     input_type: inputType,
     down_scale: downScale,
     note,
-    live_counter: liveCounter,
-    live_trigger: liveTrigger,
+    live_channels: liveChannels,
   })
 
   const save = () =>
@@ -166,6 +163,11 @@ export function ProfilePanel({
       next[channel - 1] = level
       return next
     })
+
+  const toggleLive = (channel: number) =>
+    setLiveChannels((current) =>
+      current.includes(channel) ? current.filter((c) => c !== channel) : [...current, channel].sort((a, b) => a - b),
+    )
 
   const triggers = selected.filter((c) => triggerChannels.includes(c))
   const counters = selected.filter((c) => !triggerChannels.includes(c))
@@ -355,8 +357,8 @@ export function ProfilePanel({
             selected={selected}
             names={names}
             inputType={inputType}
-            live={liveTrigger}
-            onLive={(c) => setLiveTrigger(liveTrigger === c ? null : c)}
+            live={liveChannels}
+            onLive={toggleLive}
             onToggle={toggle}
             onName={(channel, value) => setNames({ ...names, [String(channel)]: value })}
             onLevel={setLevel}
@@ -367,8 +369,8 @@ export function ProfilePanel({
             selected={selected}
             names={names}
             inputType={inputType}
-            live={liveCounter}
-            onLive={(c) => setLiveCounter(liveCounter === c ? null : c)}
+            live={liveChannels}
+            onLive={toggleLive}
             onToggle={toggle}
             onName={(channel, value) => setNames({ ...names, [String(channel)]: value })}
             onLevel={setLevel}
@@ -499,7 +501,7 @@ function ChannelGrid({
   onToggle,
   onName,
   onLevel,
-  live = null,
+  live = [],
   onLive,
 }: {
   title: string
@@ -507,8 +509,8 @@ function ChannelGrid({
   selected: number[]
   names: Record<string, string>
   inputType: number[]
-  /** The channel the portal's live tile shows for this half (null = first selected). */
-  live?: number | null
+  /** Channels the portal's live tiles show (empty = the first of each kind). */
+  live?: number[]
   onLive?: (channel: number) => void
   onToggle: (channel: number) => void
   onName: (channel: number, value: string) => void
@@ -549,13 +551,13 @@ function ChannelGrid({
               {onLive ? (
                 <Button
                   size="compact-xs"
-                  variant={live === channel ? "filled" : "subtle"}
+                  variant={live.includes(channel) ? "filled" : "subtle"}
                   color="orange"
                   disabled={!on}
                   onClick={() => onLive(channel)}
-                  title={live === channel
-                    ? "Shown on the portal's live tile (click to fall back to the first selected channel)"
-                    : "Show this channel on the portal's live tile"}
+                  title={live.includes(channel)
+                    ? "Shown on the portal's live wall (click to drop it)"
+                    : "Also show this channel on the portal's live wall"}
                   style={{ minWidth: 44 }}
                 >
                   LIVE

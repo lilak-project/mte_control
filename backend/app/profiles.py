@@ -65,10 +65,10 @@ class Profile:
     down_scale: list[int] = field(default_factory=lambda: list(DEFAULT_DOWN_SCALE))
     note: str = ""
     updated_at: float = 0.0
-    #: Which channel the portal's LIVE tile shows (one counter, one trigger).
-    #: None = the first selected one of that kind.
-    live_counter: int | None = None
-    live_trigger: int | None = None
+    #: Which channels the portal's LIVE tiles show, in the order they were
+    #: ticked. Empty = the first selected channel of each kind, which is what
+    #: a profile that has never been told otherwise wants.
+    live_channels: list[int] = field(default_factory=list)
 
     # -- the two halves of the module ------------------------------------
 
@@ -83,20 +83,19 @@ class Profile:
         return [channel for channel in self.selected if channel in TRIGGER_CHANNELS]
 
     @property
-    def live_counter_channel(self) -> int | None:
-        """The counter the portal live tile shows: the chosen one if it is still
-        selected, else the first selected counter."""
-        chans = self.counter_channels
-        if self.live_counter in chans:
-            return self.live_counter
-        return chans[0] if chans else None
+    def live_shown(self) -> list[int]:
+        """The channels the portal's live tiles show, in the profile's own order.
 
-    @property
-    def live_trigger_channel(self) -> int | None:
-        chans = self.trigger_channels
-        if self.live_trigger in chans:
-            return self.live_trigger
-        return chans[0] if chans else None
+        Only channels still being read count -- a tick left behind on a channel
+        the profile no longer reads would show a tile that never updates. With
+        none ticked the answer is the first counter and the first trigger, so a
+        profile nobody has configured still says something useful.
+        """
+        chosen = [c for c in self.selected if c in self.live_channels]
+        if chosen:
+            return chosen
+        first = [chans[0] for chans in (self.counter_channels, self.trigger_channels) if chans]
+        return sorted(first)
 
     def label(self, channel: int) -> str:
         """What to write on a row or a chart legend for this channel.
@@ -132,10 +131,8 @@ class Profile:
             "counter_channels": self.counter_channels,
             "trigger_channels": self.trigger_channels,
             "labels": {str(channel): self.label(channel) for channel in self.selected},
-            "live_counter": self.live_counter,
-            "live_trigger": self.live_trigger,
-            "live_counter_channel": self.live_counter_channel,
-            "live_trigger_channel": self.live_trigger_channel,
+            "live_channels": list(self.live_channels),
+            "live_shown": self.live_shown,
         }
 
 
@@ -198,13 +195,19 @@ def clean_selection(selected: list[int]) -> list[int]:
     return sorted(wanted)
 
 
-def clean_live(value, allowed) -> int | None:
-    """A live-tile channel choice: an integer among `allowed`, or None."""
-    try:
-        channel = int(value)
-    except (TypeError, ValueError):
-        return None
-    return channel if channel in allowed else None
+def clean_live(values) -> list[int]:
+    """The live-tile channel choices: whole channel numbers, in the given order,
+    without repeats. Anything else is dropped rather than refused -- a stale
+    number in a hand-edited file must not stop the profile loading."""
+    out: list[int] = []
+    for value in values or []:
+        try:
+            channel = int(value)
+        except (TypeError, ValueError):
+            continue
+        if channel in INPUT_CHANNELS and channel not in out:
+            out.append(channel)
+    return out
 
 
 def clean_names(names: dict) -> dict[int, str]:
@@ -326,8 +329,9 @@ def _from_json(item: dict) -> Profile | None:
         down_scale=scales,
         note=str(item.get("note", "")),
         updated_at=float(item.get("updated_at", 0.0)),
-        live_counter=clean_live(item.get("live_counter"), COUNTER_CHANNELS),
-        live_trigger=clean_live(item.get("live_trigger"), TRIGGER_CHANNELS),
+        live_channels=clean_live(item.get("live_channels")
+                                 # a profile saved by the one-per-half version
+                                 or [c for c in (item.get("live_counter"), item.get("live_trigger")) if c]),
     )
 
 
@@ -366,8 +370,7 @@ def save(
     down_scale: list[int],
     note: str = "",
     profile_id: str | None = None,
-    live_counter=None,
-    live_trigger=None,
+    live_channels=None,
 ) -> Profile:
     """Create a profile, or replace the one with this id."""
     if not name.strip():
@@ -385,8 +388,7 @@ def save(
         down_scale=scales,
         note=note.strip(),
         updated_at=time.time(),
-        live_counter=clean_live(live_counter, COUNTER_CHANNELS),
-        live_trigger=clean_live(live_trigger, TRIGGER_CHANNELS),
+        live_channels=clean_live(live_channels),
     )
     # The directory is made now rather than at the first run, so a profile is
     # somewhere on disk the moment it exists and the operator can see where.

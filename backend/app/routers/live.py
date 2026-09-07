@@ -2,10 +2,10 @@
 
     {"ok": true, "items": [{"label", "value", "unit", "state", "sub"}]}
 
-The run number (going, or the last one taken), plus one counter channel and
-one time-stamp channel. WHICH channels is the profile's choice: its LIVE
-button in the profile editor (`live_counter` / `live_trigger`); with none
-chosen, the first selected channel of that kind. Assembled from state the
+The run number (going, or the last one taken), then one tile per channel the
+profile marks LIVE in its editor (`live_channels`, scalers and triggers
+alike, in the profile's own order); with none marked, the first counter and
+the first trigger. Assembled from state the
 service already holds -- no hardware on the request path.
 """
 
@@ -39,10 +39,8 @@ def _profile(snap: dict) -> dict:
     return saved[0].to_json() if saved else {}
 
 
-def _pick(rows: list[dict], channel) -> dict | None:
-    if not rows:
-        return None
-    return next((r for r in rows if r.get("channel") == channel), rows[0])
+def _row(rows: list[dict], channel) -> dict | None:
+    return next((r for r in rows if r.get("channel") == channel), None)
 
 
 @router.get("/api/live")
@@ -67,13 +65,23 @@ def live() -> dict:
     items = [{"label": "run" if running else "last run", "value": str(number if number is not None else "—"),
               "unit": "", "state": "running" if running else "idle", "sub": profile.get("name") or state}]
 
-    row = _pick(snap.get("counters") or [], profile.get("live_counter_channel"))
-    if row:
-        items.append({"label": row.get("label") or f"ch{row.get('channel')}", "value": _num(row.get("rate")),
-                      "unit": "cnt/s", "state": "running" if running else ""})
-    row = _pick(snap.get("stamps") or [], profile.get("live_trigger_channel"))
-    if row:
-        rate = row.get("rate") if row.get("rate") is not None else row.get("hits_per_s", row.get("per_s"))
-        items.append({"label": (row.get("label") or f"ch{row.get('channel')}") + " ts", "value": _num(rate, 1),
-                      "unit": "/s", "state": "running" if running else ""})
+    counters, stamps = snap.get("counters") or [], snap.get("stamps") or []
+    labels = profile.get("labels") or {}
+    triggers = set(profile.get("trigger_channels") or [])
+    for channel in profile.get("live_shown") or []:
+        # A chosen channel keeps its tile whether or not there is a run: between
+        # runs the wall should show the same set of numbers, at "—", rather than
+        # rearranging itself every time the DAQ starts and stops.
+        stamp = channel in triggers
+        row = _row(stamps if stamp else counters, channel)
+        label = (row or {}).get("label") or labels.get(str(channel)) or f"Ch{channel}"
+        if stamp:
+            rate = (row or {}).get("rate")
+            if rate is None and row:
+                rate = row.get("hits_per_s", row.get("per_s"))
+            items.append({"label": f"{label} ts", "value": _num(rate, 1), "unit": "/s",
+                          "state": "running" if running else ""})
+        else:
+            items.append({"label": label, "value": _num((row or {}).get("rate")), "unit": "cnt/s",
+                          "state": "running" if running else ""})
     return {"ok": True, "items": items}
