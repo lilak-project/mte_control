@@ -96,6 +96,10 @@ export interface Profile {
   counter_channels: number[]
   trigger_channels: number[]
   labels: Record<string, string>
+  live_counter?: number | null
+  live_trigger?: number | null
+  live_counter_channel?: number | null
+  live_trigger_channel?: number | null
   /** Present on the profile list; absent on a run's stored snapshot. */
   next_run?: number
   run_count?: number

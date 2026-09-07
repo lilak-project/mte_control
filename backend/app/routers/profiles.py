@@ -60,6 +60,8 @@ def save_profile(request: ProfileRequest) -> dict:
             down_scale=request.down_scale,
             note=request.note,
             profile_id=request.id,
+            live_counter=request.live_counter,
+            live_trigger=request.live_trigger,
         )
     except store.ProfileError as err:
         raise HTTPException(422, str(err)) from err

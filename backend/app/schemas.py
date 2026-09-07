@@ -50,6 +50,8 @@ class ProfileRequest(BaseModel):
     input_type: list[int] = Field(
         ..., description=f"{len(INPUT_CHANNELS)} levels, 0 = negative NIM, 1 = TTL."
     )
+    live_counter: int | None = Field(None, description="Counter channel the portal live tile shows (None = first selected).")
+    live_trigger: int | None = Field(None, description="Trigger channel the portal live tile shows (None = first selected).")
     down_scale: list[int] = Field(
         ..., description=f"Dividers for ch{', ch'.join(map(str, DOWN_SCALE_CHANNELS))}."
     )

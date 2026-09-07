@@ -85,6 +85,9 @@ export interface ProfileBody {
   input_type: number[]
   down_scale: number[]
   note?: string
+  /** Channels the portal's live tile shows; null = first selected of that kind. */
+  live_counter?: number | null
+  live_trigger?: number | null
 }
 
 const profilePath = (id: string) => `/api/profiles/${encodeURIComponent(id)}`
