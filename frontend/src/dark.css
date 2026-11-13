@@ -1,0 +1,54 @@
+/* MTE on the DAQ look (neon_ui). The look itself -- tokens, parts, Mantine
+ * theme -- is neon_ui's; this file only points MTE's own names at it and
+ * squares the older MTE pieces (past runs, the run chart) to match. */
+:root {
+  --mte-live: var(--neon-ok);
+  --mte-fault: var(--neon-alarm);
+  --mte-fault-bg: var(--neon-alarm-fill);
+  --mte-rule: var(--neon-line);
+  --mte-rule-strong: var(--neon-line);
+  --mte-zebra: var(--neon-zebra);
+  --mte-dim: var(--neon-dim);
+  --mte-head-bg: var(--neon-panel);
+  --mte-head-text: var(--neon-dim);
+  --mte-hover: var(--neon-raise);
+  --mte-pick: color-mix(in srgb, var(--neon-accent) 12%, transparent);
+  --mte-surface: var(--neon-panel);
+  --mte-select-bg: color-mix(in srgb, var(--neon-accent) 12%, transparent);
+  --mte-select-line: color-mix(in srgb, var(--neon-accent) 50%, transparent);
+  --mte-axis: var(--neon-dim);
+  --mte-grid: var(--neon-grid);
+  --mte-tick: var(--neon-line);
+  --mte-chart-font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* The live flow: tiles on top, the opened channel taking what is left. */
+.mte-flow { height: 100%; display: flex; flex-direction: column; gap: var(--neon-gap); }
+.mte-flow-bar { display: flex; align-items: center; gap: 12px; }
+
+/* The older pieces, squared and darkened. */
+.mte-section-title { font-size: var(--neon-fs) !important; }
+.grid th, .grid td { border-bottom-color: var(--neon-line); }
+.swatch { border-radius: 0; height: 2px; }
+.swatch.off { visibility: hidden; }
+.runs, .log { border-radius: 0; }
+
+
+/* The DAQ tab: the run's controls, then the flow taking what is left. */
+/* The DAQ tab: run controls, the tiles at a screen's height, then the full
+   live panel below them (the page scrolls to it). */
+.mte-daq { display: flex; flex-direction: column; gap: var(--neon-gap); }
+.mte-daq > .mte-flow { height: auto; }
+.mte-daq .neon-panel.fill { min-height: 340px; }
+
+/* The run charts that overlay several channels need hues that tell lines apart
+   -- the theme's own channel set is shades of one colour on purpose. Pink stays
+   out: it means "wrong". */
+:root {
+  --mte-series-1: #19f0ff; --mte-series-2: #ffd166; --mte-series-3: #7cff6b; --mte-series-4: #b48cff;
+  --mte-series-5: #ff9f43; --mte-series-6: #ffffff; --mte-series-7: #4d8dff; --mte-series-8: #2ee6a8;
+}
+:root[data-neon-theme="bright"] {
+  --mte-series-1: #0091ad; --mte-series-2: #b38600; --mte-series-3: #2f9e1f; --mte-series-4: #7a4fd6;
+  --mte-series-5: #d9700f; --mte-series-6: #2b2a3a; --mte-series-7: #2c63d6; --mte-series-8: #0f9e78;
+}

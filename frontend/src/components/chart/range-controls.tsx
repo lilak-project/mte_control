@@ -1,5 +1,7 @@
-import { ActionIcon, Button, Group, Tooltip } from "@mantine/core"
+import { ActionIcon, Group, Tooltip } from "@mantine/core"
 import { ChevronLeft, ChevronRight, RotateCcw, ZoomIn, ZoomOut } from "lucide-react"
+
+import { Choice } from "@neon"
 
 import { RUN_PRESETS, type RunWindowControl } from "./use-run-window"
 
@@ -7,31 +9,16 @@ import { RUN_PRESETS, type RunWindowControl } from "./use-run-window"
  * The window, as one row of buttons.
  *
  * The presets are widths; **All** is not -- it is however long the run is,
- * which can be a minute or a month. It is coloured differently for that reason:
- * it answers a different question from the ones beside it, and reaching for it
- * by accident when you wanted a minute is a chart you have to re-navigate.
+ * which can be a minute or a month. It sits last, at the end of the row.
  */
 export function RangeControls({ range }: { range: RunWindowControl }) {
   return (
     <Group gap="sm" wrap="wrap">
-      <Button.Group>
-        {RUN_PRESETS.map((preset) => {
-          const active = range.presetId === preset.id
-          const everything = preset.seconds === null
-          return (
-            <Button
-              key={preset.id}
-              size="xs"
-              px="sm"
-              variant={active ? "filled" : "default"}
-              color={everything ? "grape" : "blue"}
-              onClick={() => range.choosePreset(preset.id)}
-            >
-              {preset.label}
-            </Button>
-          )
-        })}
-      </Button.Group>
+      <Choice
+        options={RUN_PRESETS.map((preset) => ({ value: preset.id, label: preset.label }))}
+        value={range.presetId}
+        onChange={range.choosePreset}
+      />
 
       <Group gap={4}>
         {/* Greyed at the ends rather than sliding into blank axis: an empty

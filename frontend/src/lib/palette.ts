@@ -38,10 +38,22 @@ export const MAX_SERIES = SERIES_COLORS.length
 
 /** The colour for the `position`-th line on a chart.  Never cycles. */
 export function seriesColor(position: number): string {
-  return SERIES_COLORS[position] ?? "#868e96"
+  // A page can swap the whole set for its own surface (NEON's dark one sets
+  // --mte-series-1 … -8 in neon.css); unset, the white-page set above holds.
+  return cssVar(`--mte-series-${position + 1}`, SERIES_COLORS[position] ?? "#868e96")
+}
+
+/** A colour the stylesheet may override, read when the chart is built. */
+function cssVar(name: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
 }
 
 /** Chart chrome, one step off the surface so it stays recessive. */
-export const AXIS_COLOR = "#868e96"
-export const GRID_COLOR = "#e9ecef"
-export const TICK_COLOR = "#dee2e6"
+export const axisColor = () => cssVar("--mte-axis", "#868e96")
+export const gridColor = () => cssVar("--mte-grid", "#e9ecef")
+export const tickColor = () => cssVar("--mte-tick", "#dee2e6")
+/** The ring round a point, in the surface colour. */
+export const chartFont = () =>
+  cssVar("--mte-chart-font", '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif')
+export const surfaceColor = () => cssVar("--mte-surface", "#ffffff")

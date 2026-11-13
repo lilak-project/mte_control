@@ -392,12 +392,10 @@ function RunData({ detail }: { detail: RunDetail }) {
                     return (
                       <tr key={channel.channel}>
                         <td className="col-ch" style={{ textAlign: "left" }}>
-                          {position >= 0 ? (
-                            <span
-                              className="swatch"
-                              style={{ background: seriesColor(position) }}
-                            />
-                          ) : null}
+                          <span
+                            className={`swatch${position >= 0 ? "" : " off"}`}
+                            style={position >= 0 ? { background: seriesColor(position) } : undefined}
+                          />
                           <span className="tabular">{label(channel.channel)}</span>
                         </td>
                         <td className={`tabular ${channel.total > 0 ? "live" : "quiet"}`}>
@@ -448,9 +446,10 @@ function RunData({ detail }: { detail: RunDetail }) {
                   {detail.stamps.channels.map((channel, position) => (
                     <tr key={channel.channel}>
                       <td className="col-ch" style={{ textAlign: "left" }}>
-                        {position < MAX_SERIES ? (
-                          <span className="swatch" style={{ background: seriesColor(position) }} />
-                        ) : null}
+                        <span
+                          className={`swatch${position < MAX_SERIES ? "" : " off"}`}
+                          style={position < MAX_SERIES ? { background: seriesColor(position) } : undefined}
+                        />
                         <span className="tabular">{label(channel.channel)}</span>
                       </td>
                       <td className="tabular live">{formatCount(channel.total)}</td>

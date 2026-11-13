@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef } from "react"
+import { useTheme } from "@neon"
 import type uPlot from "uplot"
 
 import { formatRunClock, formatTick } from "@/lib/format"
-import { AXIS_COLOR, GRID_COLOR, seriesColor, TICK_COLOR } from "@/lib/palette"
+import { axisColor, chartFont, gridColor, seriesColor, surfaceColor, tickColor } from "@/lib/palette"
 import type { SeriesChannel } from "@/lib/types"
 
 import { toAligned } from "./chart-data"
@@ -10,7 +11,6 @@ import type { RunWindow } from "./use-run-window"
 import { UplotChart } from "./uplot-react"
 import { zoomPlugin } from "./zoom-plugin"
 
-const FONT = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 
 /**
  * Counts, or hits a second, against the run clock.
@@ -44,6 +44,7 @@ export function RunChart({
   const windowRef = useRef(window)
   windowRef.current = window
 
+  const theme = useTheme()
   const data = useMemo(() => toAligned(channels), [channels])
 
   // Everything uPlot cannot be told after it is built.
@@ -72,23 +73,23 @@ export function RunChart({
       },
       axes: [
         {
-          stroke: AXIS_COLOR,
-          font: FONT,
+          stroke: axisColor(),
+          font: chartFont(),
           label: "run time",
-          labelFont: FONT,
-          grid: { stroke: GRID_COLOR, width: 1 },
-          ticks: { stroke: TICK_COLOR, width: 1, size: 5 },
+          labelFont: chartFont(),
+          grid: { stroke: gridColor(), width: 1 },
+          ticks: { stroke: tickColor(), width: 1, size: 5 },
           values: (_self: uPlot, splits: number[]) => splits.map((at) => formatRunClock(at)),
         },
         {
           scale: "y",
           label: unit,
-          labelFont: FONT,
-          stroke: AXIS_COLOR,
-          font: FONT,
+          labelFont: chartFont(),
+          stroke: axisColor(),
+          font: chartFont(),
           size: 64,
-          grid: { stroke: GRID_COLOR, width: 1 },
-          ticks: { stroke: TICK_COLOR, width: 1, size: 5 },
+          grid: { stroke: gridColor(), width: 1 },
+          ticks: { stroke: tickColor(), width: 1, size: 5 },
           values: (_self: uPlot, splits: number[]) => splits.map((value) => formatTick(value)),
         },
       ],
@@ -112,7 +113,7 @@ export function RunChart({
             // two channels cross.
             size: 8,
             width: 2,
-            stroke: "#ffffff",
+            stroke: surfaceColor(),
             fill: seriesColor(position),
           },
           value: (_self: uPlot, value: number | null) =>
@@ -121,7 +122,9 @@ export function RunChart({
       ],
       plugins: [zoomPlugin({ onRange, onReset })],
     }),
-    [channels, unit, onRange, onReset],
+    // theme: canvas colours are read when the options are built.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [channels, unit, onRange, onReset, theme],
   )
 
   // The window is owned outside the chart, so it is pushed in rather than

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react"
-import { Container, Group, Stack, Tabs, Text, Title } from "@mantine/core"
-import { Activity, Database, Settings2 } from "lucide-react"
+import { Stack } from "@mantine/core"
+import { Brand, ThemeSwitch, Screen, Spacer, Tabs, Total } from "@neon"
 
 import { api } from "@/lib/api"
 import { useAction } from "@/hooks/use-action"
 import { useStatusStream } from "@/hooks/use-status-stream"
+import { formatCount, formatRate } from "@/lib/format"
 import type { DeviceState, ProfileList } from "@/lib/types"
 
-import { LivePanel } from "./components/live-panel"
+import { FlowView } from "./components/flow/flow-view"
+import { LivePanel, RunAlerts } from "./components/live-panel"
 import { ModulePanel } from "./components/module-panel"
 import { ProfilePanel } from "./components/profile-panel"
 import { RunControls } from "./components/run-controls"
@@ -133,8 +135,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profiles])
 
-  const chooseTab = useCallback((value: string | null) => {
-    if (!value) return
+  const chooseTab = useCallback((value: string) => {
     setTab(value)
     remember(TAB_KEY, value)
   }, [])
@@ -165,85 +166,62 @@ export default function App() {
   const running = status ? ["starting", "running", "stopping"].includes(status.state) : false
   const profile = profiles?.profiles.find((each) => each.id === profileId) ?? null
 
+  const counting = (status?.counters ?? []).some((row) => row.rate != null)
+  const total = (status?.counters ?? []).reduce((sum, row) => sum + (row.rate ?? 0), 0)
+
   return (
-    <Container py="md" px="md">
-      <Stack gap="md">
-        <Group justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Group gap="sm" align="baseline">
-            <Title order={3}>MTE DAQ</Title>
-            <Text size="sm" c="dimmed">
-              NoticeKOREA CENS scaler
-            </Text>
-          </Group>
-          <StatusBar
-            device={device}
-            status={status}
-            profile={profile}
-            live={live}
-            stopping={pending === "stop"}
-            onStop={stop}
+    <Screen
+      top={
+        <>
+          <Brand name="MTE DAQ" />
+          <Tabs
+            items={[
+              { value: "setup", label: "Profile" },
+              { value: "daq", label: "DAQ" },
+              { value: "runs", label: "Past runs" },
+            ]}
+            value={tab}
+            onChange={chooseTab}
           />
-        </Group>
-
-        <Tabs value={tab} onChange={chooseTab}>
-          <Tabs.List>
-            <Tabs.Tab value="setup" leftSection={<Settings2 size={15} />}>
-              Module &amp; profile
-            </Tabs.Tab>
-            <Tabs.Tab value="daq" leftSection={<Activity size={15} />}>
-              DAQ
-            </Tabs.Tab>
-            <Tabs.Tab value="runs" leftSection={<Database size={15} />}>
-              Past runs
-            </Tabs.Tab>
-          </Tabs.List>
-
-          <Tabs.Panel value="setup" pt="lg">
-            <Stack gap="xl">
-              <ModulePanel
-                device={device}
-                onRefresh={refreshDevice}
-                disabled={running}
-                profileId={profileId}
-              />
-              <ProfilePanel
-                list={profiles}
-                selectedId={profileId}
-                onSelect={chooseProfile}
-                onChanged={refreshProfiles}
-                locked={running}
-              />
-            </Stack>
-          </Tabs.Panel>
-
-          <Tabs.Panel value="daq" pt="lg">
-            <Stack gap="xl">
-              <RunControls
-                status={status}
-                device={device}
-                profiles={profiles?.profiles ?? []}
-                profileId={profileId}
-                onProfile={chooseProfile}
-                onChanged={onRunChanged}
-              />
-              <LivePanel
-                status={status}
-                profile={profile}
-                averageSeconds={average}
-                onAverage={chooseAverage}
-              />
-            </Stack>
-          </Tabs.Panel>
-
-          <Tabs.Panel value="runs" pt="lg">
-            <RunsPanel
-              profileId={profileId}
-              profileName={profile?.name ?? ""}
-              refreshKey={generation}
-            />
-          </Tabs.Panel>
-        </Tabs>
-      </Stack>
-    </Container>
+          <Spacer />
+          <StatusBar device={device} status={status} profile={profile} live={live} stopping={pending === "stop"} onStop={stop} />
+          <Total label="total" value={counting ? formatRate(total) : "—"} unit="/s" />
+          <ThemeSwitch />
+        </>
+      }
+      status={
+        <>
+          <span>NoticeKOREA CENS scaler</span>
+          <span className="num">periods {formatCount(status?.rows ?? 0)}</span>
+          <span className="num">stamps {formatCount(status?.stamp_events ?? 0)}</span>
+          {status?.malformed ? <span className="tone-text-warn num">malformed {formatCount(status.malformed)}</span> : null}
+        </>
+      }
+    >
+      {tab === "setup" ? (
+        <Stack gap="xl">
+          <ModulePanel device={device} onRefresh={refreshDevice} disabled={running} profileId={profileId} />
+          <ProfilePanel list={profiles} selectedId={profileId} onSelect={chooseProfile} onChanged={refreshProfiles} locked={running} />
+        </Stack>
+      ) : tab === "daq" ? (
+        <div className="mte-daq">
+          <RunControls
+            status={status}
+            device={device}
+            profiles={profiles?.profiles ?? []}
+            profileId={profileId}
+            onProfile={chooseProfile}
+            onChanged={onRunChanged}
+          />
+          <RunAlerts status={status} />
+          <FlowView status={status} profile={profile} />
+          {/* Everything the tiles leave out: the averaging window, the tables,
+              several channels on one chart over the whole run, the raw rows. */}
+          <LivePanel status={status} profile={profile} averageSeconds={average} onAverage={chooseAverage} alerts={false} />
+        </div>
+      ) : (
+        <RunsPanel profileId={profileId} profileName={profile?.name ?? ""} refreshKey={generation} />
+      )}
+    </Screen>
   )
 }

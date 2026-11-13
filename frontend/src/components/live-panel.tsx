@@ -38,6 +38,8 @@ export function LivePanel({
   profile,
   averageSeconds,
   onAverage,
+  layout = "stack",
+  alerts = true,
 }: {
   status: Status | null
   /** The profile picked in the UI, used while nothing is running.
@@ -51,6 +53,10 @@ export function LivePanel({
   profile: Profile | null
   averageSeconds: number
   onAverage: (seconds: number) => void
+  /** "columns" puts counters and time stamps side by side: one screen, one glance. */
+  layout?: "stack" | "columns"
+  /** Leave the runner's warnings out, when the page shows <RunAlerts> higher up. */
+  alerts?: boolean
 }) {
   const [selected, setSelected] = useState<number[]>([])
   const [counterSeries, setCounterSeries] = useState<SeriesChannel[]>([])
@@ -177,25 +183,9 @@ export function LivePanel({
 
   return (
     <Stack gap="xl">
-      {status?.error ? (
-        <Alert color={status.state === "failed" ? "red" : "orange"} title="From the runner">
-          <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-            {status.error}
-          </Text>
-        </Alert>
-      ) : null}
+      {alerts ? <RunAlerts status={status} /> : null}
 
-      {status && status.skipped_bytes > 0 ? (
-        <Alert color="orange" title="Time stamps are arriving faster than they can be parsed">
-          <Text size="sm">
-            {formatBytes(status.skipped_bytes)} of the time-stamp file has been skipped, so the
-            per-channel rates below are a sample rather than a total.{" "}
-            <b>Nothing is lost from the data</b> — the runner is still writing every event, and the
-            file on disk is complete.
-          </Text>
-        </Alert>
-      ) : null}
-
+      <div className={layout === "columns" ? "live-columns" : "live-stack"}>
       <Section
         title="Counter channels"
         description={
@@ -231,7 +221,7 @@ export function LivePanel({
               ? "Tick a channel in the table to draw it."
               : "Nothing counted yet."
           }
-          height={280}
+          height={layout === "columns" ? 200 : 280}
           resetKey={`${status?.run_number ?? "none"}/${status?.started_at ?? 0}/counters`}
         />
 
@@ -271,7 +261,7 @@ export function LivePanel({
           dataStart={0}
           dataEnd={stampEnd}
           empty="No time stamps yet."
-          height={240}
+          height={layout === "columns" ? 200 : 240}
           resetKey={`${status?.run_number ?? "none"}/${status?.started_at ?? 0}/stamps`}
         />
 
@@ -293,6 +283,7 @@ export function LivePanel({
           empty="No complete second of time stamps yet."
         />
       </Section>
+      </div>
 
       {status && status.log.length > 0 ? (
         <Stack gap="xs">
@@ -330,5 +321,34 @@ export function LivePanel({
         </Stack>
       ) : null}
     </Stack>
+  )
+}
+
+/**
+ * What the runner has to say: its error, and a warning when time stamps come in
+ * faster than they can be parsed. Above everything else on a live screen.
+ */
+export function RunAlerts({ status }: { status: Status | null }) {
+  return (
+    <>
+      {status?.error ? (
+        <Alert color={status.state === "failed" ? "red" : "orange"} title="From the runner">
+          <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+            {status.error}
+          </Text>
+        </Alert>
+      ) : null}
+
+      {status && status.skipped_bytes > 0 ? (
+        <Alert color="orange" title="Time stamps are arriving faster than they can be parsed">
+          <Text size="sm">
+            {formatBytes(status.skipped_bytes)} of the time-stamp file has been skipped, so the
+            per-channel rates below are a sample rather than a total.{" "}
+            <b>Nothing is lost from the data</b> — the runner is still writing every event, and the
+            file on disk is complete.
+          </Text>
+        </Alert>
+      ) : null}
+    </>
   )
 }

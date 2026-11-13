@@ -17,6 +17,7 @@ import {
   UnstyledButton,
 } from "@mantine/core"
 import { ChevronDown, ChevronRight, Download, Plus, Save, Trash2, X } from "lucide-react"
+import { Choice } from "@neon"
 
 import { api, type ProfileBody } from "@/lib/api"
 import { useAction } from "@/hooks/use-action"
@@ -563,23 +564,15 @@ function ChannelGrid({
                   LIVE
                 </Button>
               ) : null}
-              <Button.Group>
-                <Button
-                  size="compact-xs"
-                  variant={ttl ? "default" : "filled"}
-                  color="gray"
-                  onClick={() => onLevel(channel, 0)}
-                >
-                  NIM
-                </Button>
-                <Button
-                  size="compact-xs"
-                  variant={ttl ? "filled" : "default"}
-                  onClick={() => onLevel(channel, 1)}
-                >
-                  TTL
-                </Button>
-              </Button.Group>
+              <Choice
+                grow
+                options={[
+                  { value: 0, label: "NIM" },
+                  { value: 1, label: "TTL" },
+                ]}
+                value={ttl ? 1 : 0}
+                onChange={(level) => onLevel(channel, level)}
+              />
             </div>
           )
         })}

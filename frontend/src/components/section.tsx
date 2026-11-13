@@ -19,18 +19,21 @@ export function Section({
   children: ReactNode
 }) {
   return (
-    <Box>
+    // The class names are for a stylesheet that draws a section differently
+    // (NEON writes the title on a box's top rule and drops the description).
+    <Box className="mte-section">
       <Box
+        className="mte-section-head"
         style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}
         mb={description ? 2 : "sm"}
       >
-        <Text fw={600} size="lg">
+        <Text fw={600} size="lg" className="mte-section-title">
           {title}
         </Text>
         {action}
       </Box>
       {description ? (
-        <Text size="sm" c="dimmed" mb="sm">
+        <Text size="sm" c="dimmed" mb="sm" className="mte-section-desc">
           {description}
         </Text>
       ) : null}

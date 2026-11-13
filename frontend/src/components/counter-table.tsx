@@ -61,7 +61,18 @@ export function CounterTable({
       <table className="grid">
         <thead>
           <tr>
-            <th className="col-ch">plot</th>
+            <th className="col-ch">
+              {/* All (as many as the chart draws) or none. */}
+              <Tooltip label={selected.length ? "Draw none" : `Draw the first ${Math.min(MAX_SERIES, rows.length)}`}>
+                <Checkbox
+                  size="xs"
+                  checked={selected.length > 0 && selected.length >= Math.min(MAX_SERIES, rows.length)}
+                  indeterminate={selected.length > 0 && selected.length < Math.min(MAX_SERIES, rows.length)}
+                  onChange={() => onSelect(selected.length ? [] : rows.slice(0, MAX_SERIES).map((row) => row.channel))}
+                  aria-label={selected.length ? "Draw no channel" : "Draw every channel the chart can take"}
+                />
+              </Tooltip>
+            </th>
             <th className="col-ch" style={{ textAlign: "left" }}>
               channel
             </th>
@@ -96,9 +107,11 @@ export function CounterTable({
                   />
                 </td>
                 <td className="col-ch" style={{ textAlign: "left" }}>
-                  {position >= 0 ? (
-                    <span className="swatch" style={{ background: seriesColor(position) }} />
-                  ) : null}
+                  {/* Always there, hidden when not drawn: ticking never shifts the name. */}
+                  <span
+                    className={`swatch${position >= 0 ? "" : " off"}`}
+                    style={position >= 0 ? { background: seriesColor(position) } : undefined}
+                  />
                   <span className="tabular">{row.label}</span>
                 </td>
                 <td className={`tabular ${counting ? "live" : "quiet"}`}>

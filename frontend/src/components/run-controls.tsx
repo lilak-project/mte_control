@@ -1,27 +1,29 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import {
   Badge,
   Button,
   Checkbox,
   Group,
+  Input,
   NumberInput,
   Paper,
-  SegmentedControl,
   Select,
   Stack,
   Text,
   TextInput,
   Tooltip,
-} from "@mantine/core"
-import { Play, Square } from "lucide-react"
+} from "@mantine/core";
+import { Play, Square } from "lucide-react";
 
-import { api, type StartOptions } from "@/lib/api"
-import { useAction } from "@/hooks/use-action"
-import { formatDuration, formatRunClock } from "@/lib/format"
-import type { DeviceState, Profile, Status } from "@/lib/types"
+import { Choice } from "@neon";
 
-import { Label } from "./help"
-import { Readout } from "./readout"
+import { api, type StartOptions } from "@/lib/api";
+import { useAction } from "@/hooks/use-action";
+import { formatDuration, formatRunClock } from "@/lib/format";
+import type { DeviceState, Profile, Status } from "@/lib/types";
+
+import { Label } from "./help";
+import { Readout } from "./readout";
 
 /**
  * The runner's own default acquisition time, and its ceiling: thirty days.
@@ -31,10 +33,10 @@ import { Readout } from "./readout"
  * is this, and the tooltip says so rather than implying a promise the hardware
  * does not make.
  */
-const UNTIL_STOPPED = 60 * 60 * 24 * 30
+const UNTIL_STOPPED = 60 * 60 * 24 * 30;
 
 /** Times worth a click; the box takes any number of seconds. */
-const ACQ_SHORTCUTS = [60, 600, 3600, 28800, 86400]
+const ACQ_SHORTCUTS = [60, 600, 3600, 28800, 86400];
 
 /**
  * Start and stop, and everything a run needs before it can start.
@@ -55,35 +57,37 @@ export function RunControls({
   onProfile,
   onChanged,
 }: {
-  status: Status | null
-  device: DeviceState | null
-  profiles: Profile[]
+  status: Status | null;
+  device: DeviceState | null;
+  profiles: Profile[];
   /** The profile a run would use: it decides the files, the number and the channels. */
-  profileId: string | null
-  onProfile: (id: string) => void
-  onChanged: () => void
+  profileId: string | null;
+  onProfile: (id: string) => void;
+  onChanged: () => void;
 }) {
-  const { pending, run } = useAction()
+  const { pending, run } = useAction();
 
-  const [note, setNote] = useState("")
-  const [runNumber, setRunNumber] = useState<number | "">("")
-  const [untilStopped, setUntilStopped] = useState(false)
-  const [acqTime, setAcqTime] = useState(3600)
-  const [period, setPeriod] = useState(1000)
-  const [monitor, setMonitor] = useState(false)
-  const [forceInit, setForceInit] = useState(false)
+  const [note, setNote] = useState("");
+  const [runNumber, setRunNumber] = useState<number | "">("");
+  const [untilStopped, setUntilStopped] = useState(true);
+  const [acqTime, setAcqTime] = useState(3600);
+  const [period, setPeriod] = useState(1000);
+  const [monitor, setMonitor] = useState(false);
+  const [forceInit, setForceInit] = useState(false);
 
-  const profile = profiles.find((each) => each.id === profileId) ?? null
-  const nextNumber = profile?.next_run ?? 0
+  const profile = profiles.find((each) => each.id === profileId) ?? null;
+  const nextNumber = profile?.next_run ?? 0;
 
   // Numbering is per profile, so a number typed for one means something else
   // in another.
   useEffect(() => {
-    setRunNumber("")
-  }, [profileId])
+    setRunNumber("");
+  }, [profileId]);
 
-  const running = status ? ["starting", "running", "stopping"].includes(status.state) : false
-  const blocked = !device?.ok || !profile
+  const running = status
+    ? ["starting", "running", "stopping"].includes(status.state)
+    : false;
+  const blocked = !device?.ok || !profile;
 
   const start = () =>
     run(
@@ -97,22 +101,22 @@ export function RunControls({
           count_period_ms: period,
           monitor,
           force_init: forceInit,
-        }
-        await api.start(options)
-        onChanged()
+        };
+        await api.start(options);
+        onChanged();
       },
       monitor ? "Monitoring — nothing is being written." : "Run started.",
-    )
+    );
 
   const stop = () =>
     run(
       "stop",
       async () => {
-        await api.stop()
-        onChanged()
+        await api.stop();
+        onChanged();
       },
       "Stopped. The module was drained and the files closed.",
-    )
+    );
 
   return (
     <Paper withBorder p="md">
@@ -135,7 +139,10 @@ export function RunControls({
               }
             />
             <Readout label="Periods read" value={String(status?.rows ?? 0)} />
-            <Readout label="Time stamps" value={String(status?.stamp_events ?? 0)} />
+            <Readout
+              label="Time stamps"
+              value={String(status?.stamp_events ?? 0)}
+            />
             <RunBadge status={status} />
           </Group>
 
@@ -173,148 +180,173 @@ export function RunControls({
           </Group>
         </Group>
 
-        <Group grow align="flex-start" wrap="wrap">
-          <Select
-            label={
-              <Label help="The experiment this run belongs to. It decides which directory the files go in, what number the run gets — numbering restarts inside each profile — and which channels the tables and charts below show. Edit profiles on the Module & profile tab.">
-                Profile
-              </Label>
-            }
-            placeholder={profiles.length ? "Pick one" : "Make one on the Module & profile tab"}
-            data={profiles.map((each) => ({ value: each.id, label: each.name }))}
-            value={profileId}
-            onChange={(value) => value && onProfile(value)}
-            disabled={running || profiles.length === 0}
-            allowDeselect={false}
-          />
-          <NumberInput
-            label={
-              <Label help={`Left empty this is ${nextNumber}, one past the highest run this profile already has on disk. Type a number only to deliberately re-use one; a number whose files already exist is refused rather than overwritten.`}>
-                Run number
-              </Label>
-            }
-            placeholder={String(nextNumber)}
-            min={0}
-            value={runNumber}
-            onChange={(value) => setRunNumber(value === "" ? "" : Number(value))}
-            disabled={running || monitor}
-          />
-          <NumberInput
-            label={
-              <Label help="How often the module latches its counters. Every row of the counter file is one of these periods, so this sets both the time resolution of the chart and how fast the file grows.">
-                Counting period (ms)
-              </Label>
-            }
-            min={1}
-            step={100}
-            value={period}
-            onChange={(value) => setPeriod(Number(value) || 1000)}
-            disabled={running}
-          />
-          <TextInput
-            label={
-              <Label help="Anything you would otherwise write in the logbook. Kept beside the run number; it can also be added or changed afterwards on the Past runs tab.">
-                Note
-              </Label>
-            }
-            value={note}
-            onChange={(event) => setNote(event.currentTarget.value)}
-            disabled={running}
-          />
-        </Group>
-
-        <Group align="flex-end" wrap="wrap" gap="sm">
-          <Stack gap={4}>
-            <Label help={`The module counts down its own acquisition time and stops itself when it reaches zero. "Until I stop it" is the longest it will accept — thirty days, the runner's own default — so it is a very long run rather than an endless one, and it still ends the moment you press Stop.`}>
-              Acquisition time
-            </Label>
-            <SegmentedControl
-              size="xs"
-              value={untilStopped ? "open" : "fixed"}
-              onChange={(value) => setUntilStopped(value === "open")}
-              disabled={running}
-              data={[
-                { value: "fixed", label: "Fixed length" },
-                { value: "open", label: "Until I stop it" },
-              ]}
-            />
-          </Stack>
-
-          {untilStopped ? (
-            <Text size="sm" c="dimmed" pb={6}>
-              Runs until you press Stop — or after {formatDuration(UNTIL_STOPPED)}, which is as long
-              as the module will accept.
-            </Text>
-          ) : (
-            <>
-              <NumberInput
-                label={<Label help="In seconds.">Seconds</Label>}
-                min={1}
-                step={60}
-                value={acqTime}
-                onChange={(value) => setAcqTime(Math.max(1, Number(value) || 1))}
-                disabled={running}
-                style={{ width: 150 }}
+        {/* The setup for the next run: locked while one is going. */}
+          <>
+            <Group grow align="flex-start" wrap="wrap">
+              <Select
+                label={
+                  <Label help="The experiment this run belongs to. It decides which directory the files go in, what number the run gets — numbering restarts inside each profile — and which channels the tables and charts below show. Edit profiles on the Module & profile tab.">
+                    Profile
+                  </Label>
+                }
+                placeholder={
+                  profiles.length
+                    ? "Pick one"
+                    : "Make one on the Module & profile tab"
+                }
+                data={profiles.map((each) => ({
+                  value: each.id,
+                  label: each.name,
+                }))}
+                value={profileId}
+                onChange={(value) => value && onProfile(value)}
+                disabled={running || profiles.length === 0}
+                allowDeselect={false}
               />
-              <Group gap={4} pb={6}>
-                {ACQ_SHORTCUTS.map((seconds) => (
-                  <Button
-                    key={seconds}
-                    size="compact-xs"
-                    variant={acqTime === seconds ? "filled" : "default"}
-                    disabled={running}
-                    onClick={() => setAcqTime(seconds)}
+              <NumberInput
+                label={
+                  <Label
+                    help={`Left empty this is ${nextNumber}, one past the highest run this profile already has on disk. Type a number only to deliberately re-use one; a number whose files already exist is refused rather than overwritten.`}
                   >
-                    {formatDuration(seconds)}
-                  </Button>
-                ))}
-              </Group>
-            </>
-          )}
-        </Group>
+                    Run number
+                  </Label>
+                }
+                placeholder={String(nextNumber)}
+                min={0}
+                value={runNumber}
+                onChange={(value) =>
+                  setRunNumber(value === "" ? "" : Number(value))
+                }
+                disabled={running || monitor}
+              />
+              <NumberInput
+                label={
+                  <Label help="How often the module latches its counters. Every row of the counter file is one of these periods, so this sets both the time resolution of the chart and how fast the file grows.">
+                    Counting period (ms)
+                  </Label>
+                }
+                min={1}
+                step={100}
+                value={period}
+                onChange={(value) => setPeriod(Number(value) || 1000)}
+                disabled={running}
+              />
+              <TextInput
+                label={
+                  <Label help="Anything you would otherwise write in the logbook. Kept beside the run number; it can also be added or changed afterwards on the Past runs tab.">
+                    Note
+                  </Label>
+                }
+                value={note}
+                onChange={(event) => setNote(event.currentTarget.value)}
+                disabled={running}
+              />
+            </Group>
 
-        <Group gap="lg">
-          <Checkbox
-            label={
-              <Label help="Watches the counters without opening any file and without taking a run number, so nothing is written and the numbering is untouched. The runner reports only a total time-stamp count in this mode, not a per-channel breakdown — that lives in the file it is not writing.">
-                Monitor only — write nothing
-              </Label>
-            }
-            checked={monitor}
-            onChange={(event) => setMonitor(event.currentTarget.checked)}
-            disabled={running}
-          />
-          <Checkbox
-            label={
-              <Label help="Before every run the runner reads the module's current down-scale and input levels back and compares them with the profile. If they already match it leaves the module alone; if they differ it writes the profile in. This makes it write regardless. Reach for it when you doubt the readback — after a firmware update, a power cycle, or anything else that could leave the module reporting one thing and doing another.">
-                Write the setup even if the module already reads back the same
-              </Label>
-            }
-            checked={forceInit}
-            onChange={(event) => setForceInit(event.currentTarget.checked)}
-            disabled={running}
-          />
-        </Group>
+            <Group align="flex-end" wrap="wrap" gap="sm">
+              <Input.Wrapper
+                label={
+                  <Label
+                  help={`Timed: the module stops itself after the time set. Continuous: runs until you press Stop (at most ${formatDuration(UNTIL_STOPPED)}, the longest the module accepts).`}
+                >
+                  Acquisition time
+                </Label>
+                }
+              >
+                <div>
+                  <Choice
+                    value={untilStopped ? "open" : "fixed"}
+                    onChange={(value) => setUntilStopped(value === "open")}
+                    disabled={running}
+                    options={[
+                      { value: "fixed", label: "Timed run" },
+                      { value: "open", label: "Continuous run" },
+                    ]}
+                  />
+                </div>
+              </Input.Wrapper>
+
+              {untilStopped ? (
+                // An empty label in the Seconds field's place: picking either
+                // length keeps the row the same height.
+                <Input.Wrapper label={<span aria-hidden style={{ visibility: "hidden" }}>Seconds</span>}>
+                  <Text c="dimmed" h="var(--neon-control)" style={{ display: "flex", alignItems: "center" }}>
+                    Until you press Stop (at most {formatDuration(UNTIL_STOPPED)})
+                  </Text>
+                </Input.Wrapper>
+              ) : (
+                <>
+                  <NumberInput
+                    label={<Label help="In seconds.">Seconds</Label>}
+                    min={1}
+                    step={60}
+                    value={acqTime}
+                    onChange={(value) =>
+                      setAcqTime(Math.max(1, Number(value) || 1))
+                    }
+                    disabled={running}
+                    style={{ width: 150 }}
+                  />
+                  <Choice
+                    options={ACQ_SHORTCUTS.map((seconds) => ({ value: seconds, label: formatDuration(seconds) }))}
+                    value={acqTime}
+                    onChange={setAcqTime}
+                    disabled={running}
+                  />
+                </>
+              )}
+            </Group>
+
+            <Group gap="lg">
+              <Checkbox
+                label={
+                  <Label help="Watches the counters without opening any file and without taking a run number, so nothing is written and the numbering is untouched. The runner reports only a total time-stamp count in this mode, not a per-channel breakdown — that lives in the file it is not writing.">
+                    Monitor only — write nothing
+                  </Label>
+                }
+                checked={monitor}
+                onChange={(event) => setMonitor(event.currentTarget.checked)}
+                disabled={running}
+              />
+              <Checkbox
+                label={
+                  <Label help="Each run writes the profile's setup (down-scale, NIM/TTL) to the module only where it differs. Tick to write it all anyway — after a power cycle or firmware update.">
+                    Force setup write
+                  </Label>
+                }
+                checked={forceInit}
+                onChange={(event) => setForceInit(event.currentTarget.checked)}
+                disabled={running}
+              />
+            </Group>
+          </>
       </Stack>
     </Paper>
-  )
+  );
 }
 
 /** The run's state, in the one place the eye goes first. */
 function RunBadge({ status }: { status: Status | null }) {
-  if (!status) return null
+  if (!status) return null;
   const look: Record<string, { color: string; label: string }> = {
     idle: { color: "gray", label: "Idle" },
     starting: { color: "blue", label: "Opening the module…" },
-    running: { color: "teal", label: status.mode === "monitor" ? "Monitoring" : "Running" },
+    running: {
+      color: "teal",
+      label: status.mode === "monitor" ? "Monitoring" : "Running",
+    },
     stopping: { color: "orange", label: "Draining and closing…" },
     finished: { color: "gray", label: "Finished" },
     failed: { color: "red", label: "Failed" },
-  }
-  const state = look[status.state] ?? look.idle
+  };
+  const state = look[status.state] ?? look.idle;
   return (
-    <Badge color={state.color} size="lg" variant={status.state === "running" ? "filled" : "light"}>
+    <Badge
+      color={state.color}
+      size="lg"
+      variant={status.state === "running" ? "filled" : "light"}
+    >
       {state.label}
     </Badge>
-  )
+  );
 }

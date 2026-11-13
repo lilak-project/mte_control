@@ -1,5 +1,4 @@
-import { Badge, Button, Group, Text, Tooltip } from "@mantine/core"
-import { CircleCheck, CircleX, Plug, Square, WifiOff } from "lucide-react"
+import { Command, StateDot, type Tone } from "@neon"
 
 import { formatRunClock } from "@/lib/format"
 import type { DeviceState, Profile, Status } from "@/lib/types"
@@ -35,59 +34,46 @@ export function StatusBar({
 }) {
   const running = status ? ["starting", "running", "stopping"].includes(status.state) : false
 
-  const module = !device
-    ? { color: "gray", label: "Checking the module…", icon: <Plug size={13} /> }
+  const module: { tone: Tone; label: string } = !device
+    ? { tone: "idle", label: "checking the module…" }
     : device.ok
-      ? { color: "teal", label: "Module ready", icon: <CircleCheck size={13} /> }
+      ? { tone: "ok", label: "module ready" }
       : device.present
-        ? { color: "red", label: "Module cannot be opened", icon: <CircleX size={13} /> }
-        : { color: "red", label: "Module not connected", icon: <Plug size={13} /> }
+        ? { tone: "alarm", label: "module cannot be opened" }
+        : { tone: "alarm", label: "module not connected" }
+
+  const run = status?.mode === "monitor"
+    ? "monitoring"
+    : status?.state === "starting"
+      ? "opening the module…"
+      : status?.state === "stopping"
+        ? "draining and closing…"
+        : `running · ${profile?.name ?? ""} run ${status?.run_number ?? ""}`
 
   return (
-    <Group gap="sm" wrap="wrap">
-      <Badge color={module.color} variant="light" leftSection={module.icon}>
-        {module.label}
-      </Badge>
-
+    <>
+      <StateDot tone={module.tone}>{module.label}</StateDot>
       {running ? (
         <>
-          <Badge color={status?.state === "stopping" ? "orange" : "teal"} variant="filled">
-            {status?.mode === "monitor"
-              ? "Monitoring"
-              : status?.state === "starting"
-                ? "Opening the module…"
-                : status?.state === "stopping"
-                  ? "Draining and closing…"
-                  : `Running · ${profile?.name ?? ""} run ${status?.run_number ?? ""}`}
-          </Badge>
-          <Text size="sm" className="tabular" fw={600}>
-            {formatRunClock(status?.module_time ?? 0)}
-          </Text>
-          <Tooltip label="Stop the run: the module is drained and the files closed">
-            <Button
-              size="compact-xs"
-              color="red"
-              leftSection={<Square size={12} />}
-              loading={stopping}
-              onClick={onStop}
-            >
-              Stop
-            </Button>
-          </Tooltip>
+          <StateDot tone={status?.state === "stopping" ? "warn" : "ok"} blink>
+            {run}
+          </StateDot>
+          <span className="num">{formatRunClock(status?.module_time ?? 0)}</span>
+          {/* No confirm: a run that needs stopping needs stopping now. */}
+          <span title="Stop the run: the module is drained and the files closed">
+            <Command small danger disabled={stopping} onRun={onStop}>
+              {stopping ? "Stopping…" : "Stop"}
+            </Command>
+          </span>
         </>
       ) : (
-        <Badge color="gray" variant="light">
-          {status?.state === "failed" ? "Last run failed" : "Idle"}
-        </Badge>
+        <StateDot tone={status?.state === "failed" ? "alarm" : "idle"}>
+          {status?.state === "failed" ? "last run failed" : "idle"}
+        </StateDot>
       )}
-
       {/* The socket, not the module: a page that has stopped updating must say
           so, or a frozen reading is read as a steady one. */}
-      {!live ? (
-        <Badge color="orange" leftSection={<WifiOff size={13} />}>
-          Reconnecting — these numbers are frozen
-        </Badge>
-      ) : null}
-    </Group>
+      {!live ? <span className="tone-text-warn">▲ reconnecting · numbers frozen</span> : null}
+    </>
   )
 }
