@@ -53,11 +53,6 @@
   --mte-series-5: #d9700f; --mte-series-6: #2b2a3a; --mte-series-7: #2c63d6; --mte-series-8: #0f9e78;
 }
 
-/* The runner's warnings: one line that is always there (NEON rule 5). */
-.mte-alertline { display: flex; align-items: center; gap: 10px; height: var(--neon-control); padding: 0 12px; background: var(--neon-panel); border-left: 3px solid currentColor; }
-.mte-alertline.faint { border-left-color: var(--neon-line); }
-.mte-alerttext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mte-alertmore { margin: 0; padding: 10px 12px; background: var(--neon-panel); white-space: pre-wrap; font: inherit; font-size: var(--neon-fs-small); }
 
 /* The run's fixed facts (RUN / NEXT, PROFILE) and its state, on one line. */
 .mte-runtags { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

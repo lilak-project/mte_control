@@ -1,4 +1,5 @@
-import { useState, type ReactNode as Node } from "react"
+import type { ReactNode as Node } from "react"
+import { NoticeLine } from "@neon"
 import { Box, Stack, Text } from "@mantine/core"
 import type { ReactNode } from "react"
 
@@ -74,36 +75,11 @@ export function Fact({
 }
 
 
-/**
- * A line that is always there (NEON rule 5): quiet it says so faintly; when
- * something is wrong it says that on the same line, in its tone, instead of
- * a box appearing and pushing the page down. The rest opens under it only
- * when asked for.
- */
-export function HeldLine({
-  tone,
-  text,
-  more,
-}: {
-  tone: "warn" | "alarm" | null
-  text: string
-  more?: Node
-}) {
-  const [open, setOpen] = useState(false)
+/** The kit's NoticeLine, under the name MTE's panels use (NEON rule 5). */
+export function HeldLine({ tone, text, more }: { tone: "warn" | "alarm" | null; text: string; more?: Node }) {
   return (
-    <div className="mte-alerts">
-      <div className={`mte-alertline ${tone ? `tone-text-${tone}` : "faint"}`} role={tone ? "alert" : undefined}>
-        <span className="mte-alerttext" title={text}>
-          {tone ? (tone === "alarm" ? "■ " : "▲ ") : ""}
-          {text}
-        </span>
-        {more ? (
-          <button type="button" className="neon-command small" onClick={() => setOpen((v) => !v)}>
-            {open ? "hide" : "details"}
-          </button>
-        ) : null}
-      </div>
-      {open && more ? <div className="mte-alertmore">{more}</div> : null}
-    </div>
+    <NoticeLine tone={tone} more={more}>
+      {text}
+    </NoticeLine>
   )
 }
