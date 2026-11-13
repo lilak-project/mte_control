@@ -1,26 +1,6 @@
 @import "@fontsource-variable/geist-mono";
 @import "uplot/dist/uPlot.min.css";
 
-:root {
-  color-scheme: light;
-
-  /* Colour means one thing each; nothing on this page is tinted for looks. */
-  --mte-live: #1f7a35;
-  --mte-fault: #b02a1e;
-  --mte-fault-bg: #fdf0ee;
-  --mte-rule: #e6e8ea;
-  --mte-rule-strong: #c9cdd1;
-  --mte-zebra: #fafbfc;
-  --mte-dim: #7a8085;
-  --mte-head-bg: #f2f4f6;
-  --mte-head-text: #3d4348;
-  --mte-hover: #eef4fb;
-  --mte-pick: #eef4fd;
-  --mte-surface: #ffffff;
-  --mte-select-bg: rgba(25, 113, 194, 0.12);
-  --mte-select-line: rgba(25, 113, 194, 0.45);
-}
-
 body {
   /* A plain white page: the only boxes on it are the ones that mean something. */
   background: var(--mantine-color-white);

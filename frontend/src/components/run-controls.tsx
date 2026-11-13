@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Badge,
   Button,
   Checkbox,
   Group,
@@ -15,15 +14,14 @@ import {
 } from "@mantine/core";
 import { Play, Square } from "lucide-react";
 
-import { Choice } from "@neon";
+import { Choice, Command, Hold, Readout, StateDot, Tag, type Tone } from "@neon";
 
 import { api, type StartOptions } from "@/lib/api";
 import { useAction } from "@/hooks/use-action";
-import { formatDuration, formatRunClock } from "@/lib/format";
+import { formatCount, formatDuration, formatRunClock } from "@/lib/format";
 import type { DeviceState, Profile, Status } from "@/lib/types";
 
 import { Label } from "./help";
-import { Readout } from "./readout";
 
 /**
  * The runner's own default acquisition time, and its ceiling: thirty days.
@@ -69,6 +67,8 @@ export function RunControls({
 
   const [note, setNote] = useState("");
   const [runNumber, setRunNumber] = useState<number | "">("");
+  /** The NEXT number being edited; null while it is shown as a tag. */
+  const [editing, setEditing] = useState<string | null>(null);
   const [untilStopped, setUntilStopped] = useState(true);
   const [acqTime, setAcqTime] = useState(3600);
   const [period, setPeriod] = useState(1000);
@@ -82,6 +82,7 @@ export function RunControls({
   // in another.
   useEffect(() => {
     setRunNumber("");
+    setEditing(null);
   }, [profileId]);
 
   const running = status
@@ -89,14 +90,27 @@ export function RunControls({
     : false;
   const blocked = !device?.ok || !profile;
 
-  const start = () =>
-    run(
+  // Set: the typed number is the one the next run asks for (blank or the
+  // profile's own next number means "the next one").
+  const settle = () => {
+    if (editing === null) return runNumber;
+    const n = Number(editing);
+    const value: number | "" = editing.trim() === "" || !Number.isInteger(n) || n < 0 || n === nextNumber ? "" : n;
+    setRunNumber(value);
+    setEditing(null);
+    return value;
+  };
+
+  const start = () => {
+    // Start with the box still open counts as pressing Set first.
+    const chosen = settle();
+    return run(
       "start",
       async () => {
         const options: StartOptions = {
           note,
           profile_id: profileId,
-          run_number: runNumber === "" ? null : Number(runNumber),
+          run_number: chosen === "" ? null : Number(chosen),
           acq_time_sec: untilStopped ? UNTIL_STOPPED : acqTime,
           count_period_ms: period,
           monitor,
@@ -107,6 +121,7 @@ export function RunControls({
       },
       monitor ? "Monitoring — nothing is being written." : "Run started.",
     );
+  };
 
   const stop = () =>
     run(
@@ -121,29 +136,57 @@ export function RunControls({
   return (
     <Paper withBorder p="md">
       <Stack gap="md">
+        {/* What this run IS (fixed: its number, its profile) on a line of its
+            own; below it, what it is DOING (NEON rule 4). */}
+        <div className="mte-runtags">
+          {running ? (
+            <Tag label="RUN" on>{status?.mode === "monitor" ? "monitor" : (status?.run_number ?? "—")}</Tag>
+          ) : monitor ? (
+            <Tag label="NEXT">no number</Tag>
+          ) : editing === null ? (
+            <button
+              type="button"
+              className="mte-tagkey"
+              title="Change the number the next run takes"
+              disabled={!profile}
+              onClick={() => setEditing(String(runNumber === "" ? nextNumber : runNumber))}
+            >
+              <Tag label="NEXT">{runNumber === "" ? nextNumber : runNumber}</Tag>
+            </button>
+          ) : (
+            <span className="mte-nextedit">
+              <input
+                className="neon-input num"
+                type="number"
+                min={0}
+                autoFocus
+                value={editing}
+                onChange={(e) => setEditing(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") settle();
+                  if (e.key === "Escape") setEditing(null);
+                }}
+              />
+              <Command small onRun={() => settle()}>
+                Set
+              </Command>
+            </span>
+          )}
+          {(status?.profile?.name ?? profile?.name) ? (
+            <Tag label="PROFILE">{running ? (status?.profile?.name ?? profile?.name) : profile?.name}</Tag>
+          ) : null}
+          <RunState status={status} />
+        </div>
+
         <Group justify="space-between" align="flex-end" wrap="wrap" gap="lg">
           <Group gap="xl" align="flex-end">
             <Readout
-              label={running ? "Run clock" : "Last run clock"}
-              value={formatRunClock(status?.module_time ?? 0)}
+              label={<Hold reserve={["Run clock", "Last run clock"]}>{running ? "Run clock" : "Last run clock"}</Hold>}
+              value={<Hold reserve={["88:88:88"]}>{formatRunClock(status?.module_time ?? 0)}</Hold>}
               size="hero"
             />
-            <Readout
-              label={profile ? `Run · ${profile.name}` : "Run"}
-              value={
-                status?.mode === "monitor"
-                  ? "monitor"
-                  : status?.run_number != null
-                    ? String(status.run_number)
-                    : `${nextNumber} next`
-              }
-            />
-            <Readout label="Periods read" value={String(status?.rows ?? 0)} />
-            <Readout
-              label="Time stamps"
-              value={String(status?.stamp_events ?? 0)}
-            />
-            <RunBadge status={status} />
+            <Readout label="Periods read" value={<Hold reserve={["8 888 888"]}>{formatCount(status?.rows ?? 0)}</Hold>} />
+            <Readout label="Time stamps" value={<Hold reserve={["88 888 888"]}>{formatCount(status?.stamp_events ?? 0)}</Hold>} />
           </Group>
 
           <Group gap="sm">
@@ -202,22 +245,6 @@ export function RunControls({
                 onChange={(value) => value && onProfile(value)}
                 disabled={running || profiles.length === 0}
                 allowDeselect={false}
-              />
-              <NumberInput
-                label={
-                  <Label
-                    help={`Left empty this is ${nextNumber}, one past the highest run this profile already has on disk. Type a number only to deliberately re-use one; a number whose files already exist is refused rather than overwritten.`}
-                  >
-                    Run number
-                  </Label>
-                }
-                placeholder={String(nextNumber)}
-                min={0}
-                value={runNumber}
-                onChange={(value) =>
-                  setRunNumber(value === "" ? "" : Number(value))
-                }
-                disabled={running || monitor}
               />
               <NumberInput
                 label={
@@ -325,28 +352,22 @@ export function RunControls({
   );
 }
 
-/** The run's state, in the one place the eye goes first. */
-function RunBadge({ status }: { status: Status | null }) {
-  if (!status) return null;
-  const look: Record<string, { color: string; label: string }> = {
-    idle: { color: "gray", label: "Idle" },
-    starting: { color: "blue", label: "Opening the module…" },
-    running: {
-      color: "teal",
-      label: status.mode === "monitor" ? "Monitoring" : "Running",
-    },
-    stopping: { color: "orange", label: "Draining and closing…" },
-    finished: { color: "gray", label: "Finished" },
-    failed: { color: "red", label: "Failed" },
-  };
-  const state = look[status.state] ?? look.idle;
+/** The run's state, in the one place the eye goes first; as wide as its longest word (rule 5). */
+const RUN_STATES: Record<string, { tone: Tone; label: string }> = {
+  idle: { tone: "idle", label: "idle" },
+  starting: { tone: "ok", label: "opening…" },
+  running: { tone: "ok", label: "running" },
+  stopping: { tone: "warn", label: "closing…" },
+  finished: { tone: "idle", label: "finished" },
+  failed: { tone: "alarm", label: "failed" },
+};
+
+function RunState({ status }: { status: Status | null }) {
+  const state = RUN_STATES[status?.state ?? "idle"] ?? RUN_STATES.idle;
+  const label = status?.state === "running" && status.mode === "monitor" ? "monitoring" : state.label;
   return (
-    <Badge
-      color={state.color}
-      size="lg"
-      variant={status.state === "running" ? "filled" : "light"}
-    >
-      {state.label}
-    </Badge>
+    <StateDot tone={state.tone} reserve={[...Object.values(RUN_STATES).map((each) => each.label), "monitoring"]}>
+      {label}
+    </StateDot>
   );
 }

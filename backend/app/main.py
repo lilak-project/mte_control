@@ -16,7 +16,9 @@ import contextlib
 import logging
 from collections.abc import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
@@ -26,7 +28,7 @@ from . import device
 from . import profiles as profile_store
 from .acquisition import acquisition
 from .config import RUNNER, RUN_ROOT, STATIC_DIR
-from . import elog
+from . import access, elog, elog_monitor
 from .routers import control, history, profiles, status
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -91,6 +93,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def control_gate(request: Request, call_next):
+    """Monitoring callers may read everything and change nothing (access.py)."""
+    if access.needs_control(request):
+        caller = await run_in_threadpool(access.who, request)
+        if not caller["control"]:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Monitoring only: running the DAQ needs a portal manager or an admin of this service."},
+            )
+    return await call_next(request)
+
+
+@app.get("/api/me", tags=["meta"])
+async def me(request: Request) -> dict:
+    """Who is looking, and whether they may control (the page's mode switch)."""
+    return await run_in_threadpool(access.who, request)
+
+
 app.include_router(control.router)
 app.include_router(history.router)
 app.include_router(profiles.router)
@@ -100,6 +121,9 @@ app.include_router(_live.router)
 # This service is a LILAK elog SYSTEM: it answers the handshake and receives
 # credentials here, and pushes run start/end from acquisition.py.
 app.include_router(elog.router)
+# The pull answer mte_monitoring gave (a SERVICE in elog), beside the SYSTEM one.
+app.include_router(elog_monitor.router)
+elog_monitor.bind(app)
 
 
 @app.get("/api/health", tags=["meta"])

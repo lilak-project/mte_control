@@ -45,10 +45,28 @@
    -- the theme's own channel set is shades of one colour on purpose. Pink stays
    out: it means "wrong". */
 :root {
-  --mte-series-1: #19f0ff; --mte-series-2: #ffd166; --mte-series-3: #7cff6b; --mte-series-4: #b48cff;
+  --mte-series-1: #19f0ff; --mte-series-2: #ffd166; --mte-series-3: #7cff6b; --mte-series-4: #b48cff; /* neon:allow — chart lines need hues the two NEON colours cannot give */
   --mte-series-5: #ff9f43; --mte-series-6: #ffffff; --mte-series-7: #4d8dff; --mte-series-8: #2ee6a8;
 }
 :root[data-neon-theme="bright"] {
-  --mte-series-1: #0091ad; --mte-series-2: #b38600; --mte-series-3: #2f9e1f; --mte-series-4: #7a4fd6;
+  --mte-series-1: #0091ad; --mte-series-2: #b38600; --mte-series-3: #2f9e1f; --mte-series-4: #7a4fd6; /* neon:allow — chart lines need hues the two NEON colours cannot give */
   --mte-series-5: #d9700f; --mte-series-6: #2b2a3a; --mte-series-7: #2c63d6; --mte-series-8: #0f9e78;
 }
+
+/* The runner's warnings: one line that is always there (NEON rule 5). */
+.mte-alertline { display: flex; align-items: center; gap: 10px; height: var(--neon-control); padding: 0 12px; background: var(--neon-panel); border-left: 3px solid currentColor; }
+.mte-alertline.faint { border-left-color: var(--neon-line); }
+.mte-alerttext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mte-alertmore { margin: 0; padding: 10px 12px; background: var(--neon-panel); white-space: pre-wrap; font: inherit; font-size: var(--neon-fs-small); }
+
+/* The run's fixed facts (RUN / NEXT, PROFILE) and its state, on one line. */
+.mte-runtags { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mte-tagkey { all: unset; cursor: pointer; }
+.mte-tagkey:disabled { cursor: default; opacity: .6; }
+.mte-tagkey:hover:not(:disabled) .neon-fixed { border-color: var(--neon-accent); }
+.mte-tagkey:focus-visible .neon-fixed { outline: 2px solid var(--neon-accent); outline-offset: 1px; }
+.mte-nextedit { display: inline-flex; align-items: center; gap: 6px; }
+.mte-nextedit .neon-input { width: 80px; height: 24px; padding: 0 6px; box-sizing: border-box; font-size: var(--neon-fs-small); }
+.mte-nextedit .neon-command { height: 24px; }
+/* Monitor mode's one-line summary of what is being watched. */
+.mte-summary { height: var(--neon-control); display: flex; align-items: center; padding: 0 12px; background: var(--neon-panel); white-space: pre; overflow: hidden; text-overflow: ellipsis; }

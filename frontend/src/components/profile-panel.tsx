@@ -22,6 +22,7 @@ import { Choice } from "@neon"
 import { api, type ProfileBody } from "@/lib/api"
 import { useAction } from "@/hooks/use-action"
 import type { ProfileList } from "@/lib/types"
+import { HeldLine } from "./section"
 
 /**
  * A profile is one experiment: which channels it reads, what they are called,
@@ -211,6 +212,7 @@ export function ProfilePanel({
             identical whether it held a saved profile or a new one, which is
             what made New feel like a button that did nothing. */}
         {drafting ? (
+          // neon:allow — appears because New was pressed (rule 5 is about changes nobody asked for)
           <Alert color="blue" title="New profile" icon={<Plus size={16} />}>
             <Stack gap={4}>
               <Text size="sm">
@@ -316,12 +318,15 @@ export function ProfilePanel({
           </Group>
         ) : null}
 
-        {locked ? (
-          <Alert color="blue">
-            A run is in progress. Editing here is safe — nothing reaches the module until the next
-            run starts.
-          </Alert>
-        ) : null}
+        {/* Held (NEON rule 5): a run starting changes the words, not the page. */}
+        <HeldLine
+          tone={null}
+          text={
+            locked
+              ? "A run is in progress. Editing here is safe — nothing reaches the module until the next run starts."
+              : "No run is in progress. Changes here reach the module when the next run starts."
+          }
+        />
 
         {/* -- channels ---------------------------------------------------- */}
 

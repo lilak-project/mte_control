@@ -12,6 +12,25 @@ There is a read-only companion beside it, [`../mte_monitoring`](../mte_monitorin
 the same page with no controls, for a shifter or a wall display. It owns no data
 and mirrors this service.
 
+
+## Control and monitoring
+
+One service, two modes (mte_monitoring was folded in here). **Monitor** shows
+the live run and the past runs and cannot start, stop or configure anything.
+**Control** adds the Profile tab, the run form and Stop.
+
+Under the portal, control is for a portal manager or an admin of this service
+(a portal grant with admin ticked, to the person or a group); everyone else the
+portal lets in gets monitoring. The server enforces it: every request that is
+not a read answers 403 for a monitoring caller (`backend/app/access.py`).
+Someone who may control can switch to Monitor at the top. Run on its own, with
+no portal, everything is allowed, as before.
+
+mte_monitoring's elog answer (a pull *service* named "MTE Monitoring") lives on
+as `POST /api/elog/monitor`, beside this service's own *system* endpoint at
+`/api/elog`. Same name and fields, so its log formats keep filling; elog needs
+Discover run once against the new URL.
+
 ## Quick start
 
 ```bash

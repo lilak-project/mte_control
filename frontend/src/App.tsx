@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react"
 import { Stack } from "@mantine/core"
-import { Brand, ThemeSwitch, Screen, Spacer, Tabs, Total } from "@neon"
+import { Brand, Choice, Hold, ThemeSwitch, Screen, Spacer, Tabs, Total } from "@neon"
 
 import { api } from "@/lib/api"
 import { useAction } from "@/hooks/use-action"
 import { useStatusStream } from "@/hooks/use-status-stream"
 import { formatCount, formatRate } from "@/lib/format"
-import type { DeviceState, ProfileList } from "@/lib/types"
+import type { DeviceState, Me, ProfileList, Status } from "@/lib/types"
 
 import { FlowView } from "./components/flow/flow-view"
 import { LivePanel, RunAlerts } from "./components/live-panel"
@@ -27,6 +27,13 @@ const PROFILE_KEY = "mte.profile"
 
 /** And which tab, so a reload during a run comes back watching it. */
 const TAB_KEY = "mte.tab"
+
+/** And whether someone who may control chose to just watch. */
+const MODE_KEY = "mte.mode"
+type Mode = "control" | "monitor"
+
+/** A portal role change reaches the page within this. */
+const ME_INTERVAL = 30000
 
 function remembered(key: string): string | null {
   try {
@@ -77,6 +84,27 @@ export default function App() {
   const [tab, setTab] = useState<string>(() => remembered(TAB_KEY) ?? "daq")
   /** Bumped whenever a run starts or stops, so the catalog re-reads. */
   const [generation, setGeneration] = useState(0)
+
+  // Control or monitoring (what mte_monitoring used to be). Who may control is
+  // the server's call (/api/me, enforced on every write); anyone who may can
+  // also step down to monitoring, where nothing that starts, stops or
+  // configures the module is drawn.
+  const [me, setMe] = useState<Me | null>(null)
+  const [chosen, setChosen] = useState<Mode>(() => (remembered(MODE_KEY) === "monitor" ? "monitor" : "control"))
+  const mayControl = me?.control ?? false
+  const control = mayControl && chosen === "control"
+  useEffect(() => {
+    const ask = () => api.me().then(setMe).catch(() => undefined)
+    ask()
+    const timer = setInterval(ask, ME_INTERVAL)
+    return () => clearInterval(timer)
+  }, [])
+  const chooseMode = (next: Mode) => {
+    setChosen(next)
+    remember(MODE_KEY, next)
+  }
+  // There is no Profile tab to be on while monitoring.
+  const shown = !control && tab === "setup" ? "daq" : tab
 
   const refreshDevice = useCallback(() => {
     api
@@ -135,6 +163,20 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profiles])
 
+  // Monitoring follows the run: when one starts under another profile, this
+  // page looks at that profile, not at whatever was last picked here.
+  const runningProfile = status?.profile?.id
+  useEffect(() => {
+    if (!control && runningProfile && runningProfile !== profileId) chooseProfile(runningProfile)
+  }, [control, runningProfile, profileId, chooseProfile])
+
+  // A run ending is when the archive gains a row worth re-reading -- also when
+  // somebody else ended it.
+  const runState = status?.state
+  useEffect(() => {
+    if (runState === "finished" || runState === "failed") setGeneration((value) => value + 1)
+  }, [runState])
+
   const chooseTab = useCallback((value: string) => {
     setTab(value)
     remember(TAB_KEY, value)
@@ -173,19 +215,36 @@ export default function App() {
     <Screen
       top={
         <>
-          <Brand name="MTE DAQ" />
+          <Brand name="MTE DAQ" readOnly={!control} />
           <Tabs
             items={[
-              { value: "setup", label: "Profile" },
-              { value: "daq", label: "DAQ" },
+              ...(control ? [{ value: "setup", label: "Profile" }] : []),
+              { value: "daq", label: control ? "DAQ" : "Live" },
               { value: "runs", label: "Past runs" },
             ]}
-            value={tab}
+            value={shown}
             onChange={chooseTab}
           />
           <Spacer />
-          <StatusBar device={device} status={status} profile={profile} live={live} stopping={pending === "stop"} onStop={stop} />
-          <Total label="total" value={counting ? formatRate(total) : "—"} unit="/s" />
+          <StatusBar
+            device={device}
+            status={status}
+            live={live}
+            stopping={pending === "stop"}
+            onStop={control ? stop : undefined}
+          />
+          <Total label="total" value={<Hold reserve={["888.88 k"]}>{counting ? formatRate(total) : "—"}</Hold>} unit="/s" />
+          {mayControl ? (
+            <Choice
+              small
+              options={[
+                { value: "control", label: "Control" },
+                { value: "monitor", label: "Monitor" },
+              ]}
+              value={control ? "control" : "monitor"}
+              onChange={chooseMode}
+            />
+          ) : null}
           <ThemeSwitch />
         </>
       }
@@ -198,21 +257,25 @@ export default function App() {
         </>
       }
     >
-      {tab === "setup" ? (
+      {shown === "setup" ? (
         <Stack gap="xl">
           <ModulePanel device={device} onRefresh={refreshDevice} disabled={running} profileId={profileId} />
           <ProfilePanel list={profiles} selectedId={profileId} onSelect={chooseProfile} onChanged={refreshProfiles} locked={running} />
         </Stack>
-      ) : tab === "daq" ? (
+      ) : shown === "daq" ? (
         <div className="mte-daq">
-          <RunControls
-            status={status}
-            device={device}
-            profiles={profiles?.profiles ?? []}
-            profileId={profileId}
-            onProfile={chooseProfile}
-            onChanged={onRunChanged}
-          />
+          {control ? (
+            <RunControls
+              status={status}
+              device={device}
+              profiles={profiles?.profiles ?? []}
+              profileId={profileId}
+              onProfile={chooseProfile}
+              onChanged={onRunChanged}
+            />
+          ) : (
+            <RunSummary status={status} profileName={profile?.name ?? ""} />
+          )}
           <RunAlerts status={status} />
           <FlowView status={status} profile={profile} />
           {/* Everything the tiles leave out: the averaging window, the tables,
@@ -220,8 +283,37 @@ export default function App() {
           <LivePanel status={status} profile={profile} averageSeconds={average} onAverage={chooseAverage} alerts={false} />
         </div>
       ) : (
-        <RunsPanel profileId={profileId} profileName={profile?.name ?? ""} refreshKey={generation} />
+        <RunsPanel profileId={profileId} profileName={profile?.name ?? ""} refreshKey={generation} readOnly={!control} />
       )}
     </Screen>
+  )
+}
+
+/**
+ * What is being watched, in words.
+ *
+ * The control page has this implicitly, in the form you just filled in. Here
+ * there is no form, so a reader who walked up to the screen has nothing else
+ * telling them which run these numbers belong to.
+ */
+function RunSummary({ status, profileName }: { status: Status | null; profileName: string }) {
+  // One line of one height whatever the run is doing (NEON rule 5): a run
+  // starting or ending changes its words, never what is below it.
+  const running = !!status && ["starting", "running", "stopping"].includes(status.state)
+  const words = !status
+    ? "…"
+    : running
+      ? [
+          `${profileName}${status.run_number != null ? ` · run ${status.run_number}` : " · monitor"}`,
+          `${status.rows} counting periods · ${status.stamp_events} time stamps · ${status.count_period_ms} ms period`,
+          status.note ? `“${status.note}”` : "",
+        ].filter(Boolean).join("   ")
+      : `No run is in progress. The numbers below are the last run's, left as they finished${
+          status.run_number != null ? ` — ${profileName} run ${status.run_number}` : ""
+        }.`
+  return (
+    <div className={`mte-summary${running ? "" : " faint"}`} title={words}>
+      {words}
+    </div>
   )
 }

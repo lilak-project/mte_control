@@ -6,7 +6,7 @@ import { api } from "@/lib/api"
 import { useAction } from "@/hooks/use-action"
 import type { DeviceState, DeviceTest } from "@/lib/types"
 
-import { Fact, FactGrid } from "./section"
+import { Fact, FactGrid, HeldLine } from "./section"
 
 /**
  * Is the module connected, and may we open it?
@@ -90,25 +90,37 @@ export function ModulePanel({
           </Group>
         </Group>
 
-        {device && !device.ok ? (
-          <Alert color="red" title="The module is not usable">
-            <Stack gap="xs">
-              {device.problems.map((problem) => (
-                <Text size="sm" key={problem}>
-                  {problem}
-                </Text>
-              ))}
-              {device.remedy ? (
-                <>
-                  <Text size="sm" fw={600}>
-                    This is fixed once, not per run:
+        {/* Held (NEON rule 5): the module dropping out fills this line in
+            place instead of pushing the page. */}
+        <HeldLine
+          tone={device && !device.ok ? "alarm" : null}
+          text={
+            !device
+              ? "Checking the module…"
+              : device.ok
+                ? "The module is usable"
+                : `The module is not usable: ${device.problems[0] ?? ""}`
+          }
+          more={
+            device && !device.ok ? (
+              <Stack gap="xs">
+                {device.problems.map((problem) => (
+                  <Text size="sm" key={problem}>
+                    {problem}
                   </Text>
-                  <Code block>{device.remedy}</Code>
-                </>
-              ) : null}
-            </Stack>
-          </Alert>
-        ) : null}
+                ))}
+                {device.remedy ? (
+                  <>
+                    <Text size="sm" fw={600}>
+                      This is fixed once, not per run:
+                    </Text>
+                    <Code block>{device.remedy}</Code>
+                  </>
+                ) : null}
+              </Stack>
+            ) : undefined
+          }
+        />
 
         {device?.present ? (
           <FactGrid>
@@ -128,6 +140,7 @@ export function ModulePanel({
         ) : null}
 
         {test ? (
+          // neon:allow — appears because Test was pressed, not on its own (rule 5 is about changes nobody asked for)
           <Alert
             color={test.ok ? "teal" : "red"}
             title={test.ok ? "The module answered" : "It did not"}

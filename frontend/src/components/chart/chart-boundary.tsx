@@ -31,6 +31,7 @@ export class ChartBoundary extends Component<{ children: ReactNode }, State> {
     const { error } = this.state
     if (!error) return this.props.children
     return (
+      // neon:allow — takes the chart's own place when the chart fails; nothing moves
       <Alert color="red" icon={<AlertTriangle size={18} />} title="The chart could not be drawn">
         <Stack gap="xs">
           <Text size="sm">

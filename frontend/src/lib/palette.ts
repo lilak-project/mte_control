@@ -1,3 +1,4 @@
+// neon:allow-colour — these are fallbacks only: a NEON page sets every --mte-* (dark.css).
 /**
  * Series colours.
  *

@@ -1,4 +1,5 @@
 import type {
+  Me,
   DeviceState,
   DeviceTest,
   Profile,
@@ -92,6 +93,9 @@ export interface ProfileBody {
 const profilePath = (id: string) => `/api/profiles/${encodeURIComponent(id)}`
 
 export const api = {
+  /** Who is looking, and whether they may control. */
+  me: () => request<Me>("/api/me"),
+
   /** Is the module there and openable?  Reads sysfs; never touches the module. */
   device: () => request<DeviceState>("/api/device"),
 

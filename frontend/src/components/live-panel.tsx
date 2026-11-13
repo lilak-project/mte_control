@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Alert, Badge, Collapse, Group, SegmentedControl, Stack, Text, UnstyledButton } from "@mantine/core"
+import { Badge, Collapse, Group, Stack, Text, UnstyledButton } from "@mantine/core"
+import { Choice } from "@neon"
 import { ChevronDown, ChevronRight } from "lucide-react"
 
 import { ChartCard } from "./chart/chart-card"
@@ -10,6 +11,7 @@ import type { CounterRow, Profile, SeriesChannel, StampRow, Status } from "@/lib
 
 import { CounterTable } from "./counter-table"
 import { PrintBlock } from "./print-block"
+import { HeldLine } from "./section"
 import { Section } from "./section"
 import { StampTable } from "./stamp-table"
 
@@ -198,11 +200,11 @@ export function LivePanel({
             <Text size="xs" c="dimmed">
               Average over
             </Text>
-            <SegmentedControl
-              size="xs"
-              data={AVERAGE_WINDOWS}
-              value={String(averageSeconds)}
-              onChange={(value) => onAverage(Number(value))}
+            <Choice
+              small
+              options={AVERAGE_WINDOWS.map((w) => ({ value: Number(w.value), label: w.label }))}
+              value={averageSeconds}
+              onChange={onAverage}
             />
           </Group>
         }
@@ -326,29 +328,25 @@ export function LivePanel({
 
 /**
  * What the runner has to say: its error, and a warning when time stamps come in
- * faster than they can be parsed. Above everything else on a live screen.
+ * faster than they can be parsed.
+ *
+ * One line that is always there (NEON rule 5): quiet it says so, and a warning
+ * arriving fills the same line instead of pushing the screen down. The full
+ * text opens under it only when asked for.
  */
 export function RunAlerts({ status }: { status: Status | null }) {
-  return (
-    <>
-      {status?.error ? (
-        <Alert color={status.state === "failed" ? "red" : "orange"} title="From the runner">
-          <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-            {status.error}
-          </Text>
-        </Alert>
-      ) : null}
-
-      {status && status.skipped_bytes > 0 ? (
-        <Alert color="orange" title="Time stamps are arriving faster than they can be parsed">
-          <Text size="sm">
-            {formatBytes(status.skipped_bytes)} of the time-stamp file has been skipped, so the
-            per-channel rates below are a sample rather than a total.{" "}
-            <b>Nothing is lost from the data</b> — the runner is still writing every event, and the
-            file on disk is complete.
-          </Text>
-        </Alert>
-      ) : null}
-    </>
-  )
+  const error = status?.error ?? ""
+  const skipped = status && status.skipped_bytes > 0 ? status.skipped_bytes : 0
+  const tone = error ? (status?.state === "failed" ? "alarm" : "warn") : skipped ? "warn" : null
+  const text = error
+    ? `From the runner: ${error.split("\n")[0]}`
+    : skipped
+      ? `Time stamps arrive faster than they can be parsed: ${formatBytes(skipped)} skipped, rates are a sample (the file on disk is complete)`
+      : "No warnings from the runner"
+  const more = error
+    ? <pre style={{ margin: 0, whiteSpace: "pre-wrap", font: "inherit" }}>{error}</pre>
+    : skipped
+      ? "Nothing is lost from the data — the runner is still writing every event, and the file on disk is complete; only the per-channel rates on this page are a sample."
+      : undefined
+  return <HeldLine tone={tone} text={text} more={more} />
 }
